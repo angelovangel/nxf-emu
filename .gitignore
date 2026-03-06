@@ -1,0 +1,8 @@
+demo
+work
+.nextflow*
+results
+.DS_Store
+testdata
+output
+
