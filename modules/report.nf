@@ -7,10 +7,11 @@ process MAKE_REPORT {
         path "filtered/*"
         path "mapping/*"
         path "taxonomy/*"
+        path "combined_species.tsv"
 
     output:
-        path "summary_counts.tsv"
-        path "report.html"
+        //path "summary_counts.tsv"
+        path "nxf-emu-report.html"
 
     script:
     """
@@ -30,7 +31,6 @@ process MAKE_REPORT {
         fi
         
         # Check if mapping stats exist
-        # Emu might have different naming if filtered (sample.filtered.mapping_stats.tsv)
         mapping_file=\$(ls mapping/\${sample}*.mapping_stats.tsv 2>/dev/null | head -n 1)
         
         if [ -n "\$mapping_file" ]; then
@@ -43,6 +43,6 @@ process MAKE_REPORT {
     done
 
     # Generate HTML report
-    make_html_report.py summary_counts.tsv taxonomy/*.tsv
+    make_html_report.py summary_counts.tsv combined_species.tsv taxonomy/*.tsv
     """
 }

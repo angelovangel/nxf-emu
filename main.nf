@@ -76,6 +76,7 @@ workflow {
         READ_STATS.out.counts.collect(),
         ch_filtered_counts.collect().ifEmpty([]),
         EMU_ABUNDANCE.out.counts.collect().ifEmpty([]),
-        EMU_ABUNDANCE.out.ch_abundance.collect().ifEmpty([])
+        EMU_ABUNDANCE.out.ch_abundance.collect().ifEmpty([]),
+        EMU_COMBINE.out.ch_combined
     )
 }
