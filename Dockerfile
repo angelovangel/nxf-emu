@@ -10,7 +10,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 RUN conda config --add channels defaults && \
     conda config --add channels bioconda && \
     conda config --add channels conda-forge && \
-    conda install -y emu osfclient
+    conda install -y emu osfclient && \
+    conda clean -afy
 
 # Download the Emu default database (v3.0+)
 ENV EMU_DATABASE_DIR=/opt/emu_database
