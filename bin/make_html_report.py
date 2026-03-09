@@ -152,6 +152,7 @@ def main():
             js_content = f.read()
         js_content = js_content.replace('__SAMPLES_DATA__', json.dumps(all_samples))
         js_content = js_content.replace('__HEATMAP_DATA__', json.dumps(heatmap_data))
+        js_content = js_content.replace('__SUMMARY_DATA__', json.dumps(summary_data))
     except Exception as e:
         print(f"Warning: Could not load {js_template_path}: {e}", file=sys.stderr)
         js_content = f"// Error loading report.js: {e}"
@@ -209,7 +210,15 @@ def main():
     <div class="max-w-7xl mx-auto space-y-8">
         <!-- Pipeline Summary -->
         <details class="collapsible-section" open>
-            <summary><h1 class="text-xl font-bold text-gray-900">Pipeline Summary</h1></summary>
+            <summary>
+                <div class="flex justify-between items-center w-full pr-8">
+                    <h1 class="text-xl font-bold text-gray-900">Pipeline Summary</h1>
+                    <button onclick="downloadSummaryCSV(event)" class="flex items-center gap-2 px-3 py-1.5 bg-indigo-50 text-indigo-700 rounded-lg hover:bg-indigo-100 transition-colors text-sm font-semibold">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+                        Download CSV
+                    </button>
+                </div>
+            </summary>
             <div class="section-content">
                 <div class="overflow-x-auto border rounded-xl">
                     <table id="summaryTable" class="min-w-full divide-y divide-gray-200">
@@ -275,7 +284,15 @@ def main():
 
         <!-- Heatmap Section -->
         <details class="collapsible-section" open>
-            <summary><h1 class="text-xl font-bold text-gray-900">Abundance Heatmap</h1></summary>
+            <summary>
+                <div class="flex justify-between items-center w-full pr-8">
+                    <h1 class="text-xl font-bold text-gray-900">Abundance Heatmap</h1>
+                    <button onclick="downloadHeatmapCSV(event)" class="flex items-center gap-2 px-3 py-1.5 bg-indigo-50 text-indigo-700 rounded-lg hover:bg-indigo-100 transition-colors text-sm font-semibold">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+                        Download CSV
+                    </button>
+                </div>
+            </summary>
             <div class="section-content">
                 <div class="overflow-x-auto border rounded-xl bg-gray-50">
                     <div id="heatmapContainer" class="p-4 inline-block min-w-full">

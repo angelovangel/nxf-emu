@@ -1,5 +1,6 @@
 const samples = __SAMPLES_DATA__;
 const heatmapData = __HEATMAP_DATA__;
+const summaryData = __SUMMARY_DATA__;
 let chartInstance = null;
 
 // --- Dropdown Management ---
@@ -244,6 +245,100 @@ document.getElementById('topNInput').addEventListener('change', () => {
     updateChart();
     renderHeatmap();
 });
+
+// --- Download Logic ---
+function downloadCSV(filename, csvContent) {
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement("a");
+    if (link.download !== undefined) {
+        const url = URL.createObjectURL(blob);
+        link.setAttribute("href", url);
+        link.setAttribute("download", filename);
+        link.style.visibility = 'hidden';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    }
+}
+
+function downloadSummaryCSV(event) {
+    if (event) event.stopPropagation();
+    if (!summaryData || summaryData.length === 0) return;
+
+    const headers = Object.keys(summaryData[0]);
+    let csv = headers.join(',') + '\n';
+
+    summaryData.forEach(row => {
+        csv += headers.map(h => {
+            let val = row[h] || "0";
+            // Ensure read counts and related metrics are integers
+            if (['raw_reads', 'filtered_reads', 'mapped', 'unmapped', 'mapped_filtered', 'mapped_unclassified'].includes(h)) {
+                val = Math.round(parseFloat(val) || 0);
+            }
+            if (typeof val === 'string' && (val.includes(',') || val.includes('"') || val.includes('\n'))) {
+                val = '"' + val.replace(/"/g, '""') + '"';
+            }
+            return val;
+        }).join(',') + '\n';
+    });
+
+    downloadCSV('pipeline_summary.csv', csv);
+}
+
+function downloadHeatmapCSV(event) {
+    if (event) event.stopPropagation();
+    const rank = document.getElementById('rankSelect').value;
+    const topN = parseInt(document.getElementById('topNInput').value) || 10;
+    const selectedNames = getSelectedSampleNames();
+
+    if (selectedNames.length === 0) {
+        alert("No samples selected for download.");
+        return;
+    }
+
+    const sampleIndices = selectedNames.map(name => {
+        let idx = heatmapData.samples.indexOf(name);
+        if (idx === -1) {
+            const clean = (s) => s.replace(/(\.filtered|\.fastq|\.tsv|_rel-abundance\.tsv)$/g, '');
+            const cleanName = clean(name);
+            idx = heatmapData.samples.findIndex(s => clean(s) === cleanName);
+        }
+        return idx;
+    }).filter(idx => idx !== -1);
+
+    // Aggregate by selected rank
+    const aggregated = {};
+    heatmapData.taxa.forEach(t => {
+        const taxonName = t[rank] || 'Unknown';
+        if (!aggregated[taxonName]) {
+            aggregated[taxonName] = new Array(heatmapData.samples.length).fill(0);
+        }
+        t.abundances.forEach((val, i) => {
+            aggregated[taxonName][i] += val;
+        });
+    });
+
+    const sortedTaxa = Object.keys(aggregated).map(name => ({
+        name: name,
+        sum: sampleIndices.reduce((acc, idx) => acc + (aggregated[name][idx] || 0), 0),
+        abundances: aggregated[name]
+    }))
+        .filter(t => t.sum > 0)
+        .sort((a, b) => b.sum - a.sum)
+        .slice(0, topN);
+
+    // Build CSV
+    let csv = 'Taxon,' + selectedNames.join(',') + '\n';
+    sortedTaxa.forEach(t => {
+        let line = `"${t.name.replace(/"/g, '""')}"`;
+        sampleIndices.forEach(idx => {
+            line += ',' + (t.abundances[idx] || 0);
+        });
+        csv += line + '\n';
+    });
+
+    downloadCSV(`abundance_heatmap_${rank}.csv`, csv);
+}
 
 // --- Summary Table Sorting ---
 let summarySortDirection = {};

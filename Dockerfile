@@ -1,4 +1,4 @@
-# emu image
+# aangeloo/emu 
 FROM continuumio/miniconda3:latest
 
 #
