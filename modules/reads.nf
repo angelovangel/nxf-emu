@@ -135,6 +135,28 @@ process FILTER_READS {
     """
 }
 
+process SUBSAMPLE_READS {
+    container 'docker.io/aangeloo/nxf-tgs:latest'
+    tag "${reads.simpleName}"
+    
+    input:
+        path reads
+    
+    output:
+        path "*.fastq.gz", emit: reads
+        path "*.subsampled_reads.txt", emit: counts
+    
+    script:
+    """
+    faster -p ${params.subsample} ${reads} > ${reads.simpleName}.subsampled.fastq
+    pigz -c ${reads.simpleName}.subsampled.fastq > ${reads.simpleName}.subsampled.fastq.gz
+    
+    # Get counts
+    faster -t ${reads.simpleName}.subsampled.fastq.gz > ${reads.simpleName}.subsampled.readstats.tsv
+    awk 'NR==2 {print \$2}' ${reads.simpleName}.subsampled.readstats.tsv > ${reads.simpleName}.subsampled_reads.txt
+    """
+}
+
 process READ_HIST {
     container 'docker.io/aangeloo/nxf-tgs:latest'
     tag "${reads.simpleName}"

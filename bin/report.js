@@ -136,10 +136,10 @@ function renderHeatmap() {
         html += `<tr><td class="p-2 font-medium ${isOther ? 'bg-gray-50 italic' : 'bg-white'} border sticky left-0 z-10 whitespace-nowrap shadow-sm">${t.name}</td>`;
         sampleIndices.forEach(idx => {
             const val = t.abundances[idx] || 0;
-            const { bg, text } = getHeatmapColor(val);
-            html += `<td class="p-2 text-center border heatmap-cell" style="background-color: ${bg}; color: ${text}" title="${t.name} in ${heatmapData.samples[idx]}: ${(val * 100).toFixed(4)}%">
-                        ${val > 0.001 ? (val * 100).toFixed(1) + '%' : (val > 0 ? '<0.1%' : '-')}
-                     </td>`;
+                const { bg, text } = getHeatmapColor(val);
+                html += `<td class="p-2 text-center border heatmap-cell" style="background-color: ${bg}; color: ${text}" title="${t.name} in ${heatmapData.samples[idx]}: ${(val * 100).toFixed(4)}%">
+                            ${val > 0.0001 ? (val * 100).toFixed(2) + '%' : (val > 0 ? '<0.01%' : '-')}
+                         </td>`;
         });
         html += '</tr>';
     });

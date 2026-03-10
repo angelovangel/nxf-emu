@@ -5,6 +5,7 @@ process MAKE_REPORT {
     input:
         path "raw/*"
         path "filtered/*"
+        path "subsampled/*"
         path "mapping/*"
         path "taxonomy/*"
         path "combined_species.tsv"
@@ -15,7 +16,7 @@ process MAKE_REPORT {
 
     script:
     """
-    echo -e "sample\\traw_reads\\tfiltered_reads\\tmapped\\tunmapped\\tmapped_filtered\\tmapped_unclassified" > summary_counts.tsv
+    echo -e "sample\\traw_reads\\tfiltered_reads\\tsubsampled_reads\\tmapped\\tunmapped\\tmapped_filtered\\tmapped_unclassified" > summary_counts.tsv
     
     # Iterate through raw read count files
     for raw_file in raw/*.reads.txt; do
@@ -30,6 +31,13 @@ process MAKE_REPORT {
             filtered_count=\$raw_count
         fi
         
+        # Check if subsampled count exists
+        if [ -f "subsampled/\${sample}.subsampled_reads.txt" ]; then
+            subsampled_count=\$(cat "subsampled/\${sample}.subsampled_reads.txt")
+        else
+            subsampled_count=\$filtered_count
+        fi
+        
         # Check if mapping stats exist
         mapping_file=\$(ls mapping/\${sample}*.mapping_stats.tsv 2>/dev/null | head -n 1)
         
@@ -39,7 +47,7 @@ process MAKE_REPORT {
             mapping_data="0\\t0\\t0\\t0"
         fi
         
-        echo -e "\$sample\\t\$raw_count\\t\$filtered_count\\t\$mapping_data" >> summary_counts.tsv
+        echo -e "\$sample\\t\$raw_count\\t\$filtered_count\\t\$subsampled_count\\t\$mapping_data" >> summary_counts.tsv
     done
 
     # Generate HTML report

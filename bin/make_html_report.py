@@ -105,7 +105,10 @@ def main():
     # Natural sort all_samples by name
     all_samples.sort(key=lambda x: natural_sort_key(x['name']))
 
-    table_header_html = "".join([f'<th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider sortable" data-key="{h.replace(" ", "_")}" onclick="sortSummaryTable({i})">{h}</th>' for i, h in enumerate(headers)]) if headers else ""
+    table_header_html = ""
+    for i, h in enumerate(headers):
+        align = "text-left" if h == 'sample' else "text-right pr-6"
+        table_header_html += f'<th class="px-4 py-3 {align} text-xs font-medium text-gray-500 uppercase tracking-wider sortable" data-key="{h.replace(" ", "_")}" onclick="sortSummaryTable({i})">{h}</th>'
     
     table_rows_html = ""
     # Natural sort summary data by sample name
@@ -117,7 +120,7 @@ def main():
         table_rows_html += f"<tr {data_attrs} class='hover:bg-gray-50'>"
         
         # Get basis for percentage text calculation
-        total_reads = float(row.get('filtered_reads', row.get('raw_reads', 0)) or 1)
+        total_reads = float(row.get('subsampled_reads', row.get('filtered_reads', row.get('raw_reads', 0))) or 1)
         if total_reads == 0: total_reads = 1
         
         for h in headers:
@@ -131,7 +134,7 @@ def main():
                     perc = (count_val / total_reads) * 100
                     display_val = f"{int(count_val):,} ({perc:.1f}%)"
                 except: pass
-            elif h in ['raw_reads', 'filtered_reads']:
+            elif h in ['raw_reads', 'filtered_reads', 'subsampled_reads']:
                 try: display_val = f"{int(float(val)):,}"
                 except: pass
             elif h != 'sample':
