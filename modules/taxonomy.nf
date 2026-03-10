@@ -2,7 +2,7 @@
 process EMU_ABUNDANCE {
     container 'docker.io/aangeloo/emu:latest'
     //errorStrategy 'ignore'
-    maxForks 1 // avoid memory issues due to cpus x forks
+    //maxForks 1 // avoid memory issues due to cpus x forks
     tag "${reads.name}"
     publishDir "${params.outdir}/01-taxonomy", mode: 'copy', pattern: '**rel-abundance.tsv'
 
