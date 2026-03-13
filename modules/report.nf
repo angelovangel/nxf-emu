@@ -3,51 +3,37 @@ process MAKE_REPORT {
     publishDir "${params.outdir}", mode: 'copy'
 
     input:
-        path "raw/*"
+        path "raw_stats/*"
         path "filtered/*"
-        path "subsampled/*"
-        path "mapping/*"
         path "taxonomy/*"
         path "combined_species.tsv"
 
     output:
         //path "summary_counts.tsv"
-        path "nxf-emu-report.html"
+        path "nxf-savont-report.html"
 
     script:
     """
-    echo -e "sample\\traw_reads\\tfiltered_reads\\tsubsampled_reads\\tmapped\\tunmapped\\tmapped_filtered\\tmapped_unclassified" > summary_counts.tsv
+    echo -e "sample\\traw_reads\\traw_n50\\traw_Q20\\tfiltered_reads" > summary_counts.tsv
     
-    # Iterate through raw read count files
-    for raw_file in raw/*.reads.txt; do
-        sample=\$(basename \$raw_file .reads.txt)
+    # Iterate through raw stats files
+    for raw_stats in raw_stats/*.readstats.tsv; do
+        sample=\$(basename \$raw_stats .readstats.tsv)
         
-        raw_count=\$(cat \$raw_file)
+        # Extract count and N50 from raw stats
+        raw_data=\$(awk 'NR==2' \$raw_stats)
+        raw_count=\$(echo "\$raw_data" | awk '{print \$2}')
+        raw_n50=\$(echo "\$raw_data" | awk '{print \$11}')
+        raw_q20=\$(echo "\$raw_data" | awk '{print \$12}')
         
-        # Check if filtered count exists
+        # Check if filtered count exists (from SAVONT_ASV)
         if [ -f "filtered/\${sample}.filtered_reads.txt" ]; then
             filtered_count=\$(cat "filtered/\${sample}.filtered_reads.txt")
         else
             filtered_count=\$raw_count
         fi
         
-        # Check if subsampled count exists
-        if [ -f "subsampled/\${sample}.subsampled_reads.txt" ]; then
-            subsampled_count=\$(cat "subsampled/\${sample}.subsampled_reads.txt")
-        else
-            subsampled_count=\$filtered_count
-        fi
-        
-        # Check if mapping stats exist
-        mapping_file=\$(ls mapping/\${sample}*.mapping_stats.tsv 2>/dev/null | head -n 1)
-        
-        if [ -n "\$mapping_file" ]; then
-            mapping_data=\$(tail -n 1 \$mapping_file)
-        else
-            mapping_data="0\\t0\\t0\\t0"
-        fi
-        
-        echo -e "\$sample\\t\$raw_count\\t\$filtered_count\\t\$subsampled_count\\t\$mapping_data" >> summary_counts.tsv
+        echo -e "\$sample\\t\$raw_count\\t\$raw_n50\\t\$raw_q20\\t\$filtered_count" >> summary_counts.tsv
     done
 
     # Generate HTML report

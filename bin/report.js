@@ -136,8 +136,8 @@ function renderHeatmap() {
         html += `<tr><td class="p-2 font-medium ${isOther ? 'bg-gray-50 italic' : 'bg-white'} border sticky left-0 z-10 whitespace-nowrap shadow-sm">${t.name}</td>`;
         sampleIndices.forEach(idx => {
             const val = t.abundances[idx] || 0;
-                const { bg, text } = getHeatmapColor(val);
-                html += `<td class="p-2 text-center border heatmap-cell" style="background-color: ${bg}; color: ${text}" title="${t.name} in ${heatmapData.samples[idx]}: ${(val * 100).toFixed(4)}%">
+            const { bg, text } = getHeatmapColor(val);
+            html += `<td class="p-2 text-center border heatmap-cell" style="background-color: ${bg}; color: ${text}" title="${t.name} in ${heatmapData.samples[idx]}: ${(val * 100).toFixed(4)}%">
                             ${val > 0.0001 ? (val * 100).toFixed(2) + '%' : (val > 0 ? '<0.01%' : '-')}
                          </td>`;
         });
@@ -272,7 +272,7 @@ function downloadSummaryCSV(event) {
         csv += headers.map(h => {
             let val = row[h] || "0";
             // Ensure read counts and related metrics are integers
-            if (['raw_reads', 'filtered_reads', 'mapped', 'unmapped', 'mapped_filtered', 'mapped_unclassified'].includes(h)) {
+            if (['raw_reads', 'filtered_reads', 'raw_n50'].includes(h)) {
                 val = Math.round(parseFloat(val) || 0);
             }
             if (typeof val === 'string' && (val.includes(',') || val.includes('"') || val.includes('\n'))) {

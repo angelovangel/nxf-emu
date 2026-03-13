@@ -8,29 +8,60 @@ process SAVONT_ASV {
         path reads
 
     output:
-        path "asvs", emit: ch_asvs
+        path "${reads.simpleName}", emit: ch_asvs
+        path "${reads.simpleName}.filtered_reads.txt", emit: counts
 
     script:
     """
-    savont asv $reads -o asvs -t $task.cpus
+    savont asv $reads -o ${reads.simpleName} -t $task.cpus --min-read-length ${params.minreadlength} --max-read-length ${params.maxreadlength}
+    
+    # Extract valid reads from log
+    log_file=\$(ls ${reads.simpleName}/savont_*.log | head -n 1)
+    if [ -f "\$log_file" ]; then
+        grep "Number of valid reads" "\$log_file" | awk -F' - ' '{print \$2}' | awk -F'.' '{print \$1}' | sed 's/ //g' > ${reads.simpleName}.filtered_reads.txt
+    else
+        echo "0" > ${reads.simpleName}.filtered_reads.txt
+    fi
     """
 }
 
 process SAVONT_CLASSIFY {
     container 'docker.io/aangeloo/nxf-savont:latest'
-    tag "${params.db}"
+    tag "${asvs.simpleName}"
     publishDir "${params.outdir}/01-taxonomy", mode: 'copy'
 
     input:
         path asvs
 
     output:
-        path "species_abundance.tsv", emit: ch_abundance
+        path "${asvs.simpleName}_rel-abundance.tsv", emit: ch_abundance
 
     script:
     def db = params.db == "emu" ? "emu_default" : "silva_db"
     """
-    savont classify -i $asvs -o . --emu-db /databases/$db -t $task.cpus
+    if [ -s "${asvs}/final_asvs.fasta" ]; then
+        savont classify -i $asvs -o . --emu-db /databases/$db -t $task.cpus
+        mv species_abundance.tsv ${asvs.simpleName}_rel-abundance.tsv
+    else
+        # Create empty abundance file with headers if no ASVs found
+        echo -e "abundance\\ttax_id\\tspecies\\tgenus\\tfamily\\torder\\tclass\\tphylum\\tclade\\tsuperkingdom" > ${asvs.simpleName}_rel-abundance.tsv
+    fi
+    """
+}
+
+process SAVONT_COMBINE {
+    container 'docker.io/aangeloo/nxf-tgs:latest'
+    publishDir "${params.outdir}/01-taxonomy", mode: 'copy'
+
+    input:
+        path "abundances/*"
+
+    output:
+        path "savont-combined-species.tsv", emit: ch_combined
+
+    script:
+    """
+    combine_savont.py savont-combined-species.tsv abundances/*.tsv
     """
 }
 

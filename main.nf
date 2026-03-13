@@ -1,6 +1,6 @@
 include {DORADO_BASECALL; DORADO_BASECALL_BARCODING} from "./modules/basecall.nf"
-include {MERGE_READS; READ_STATS; READ_HIST; CONVERT_EXCEL; VALIDATE_SAMPLESHEET; CONVERT_READS; FILTER_READS; SUBSAMPLE_READS} from './modules/reads.nf'
-include {SAVONT_ASV; SAVONT_CLASSIFY} from './modules/taxonomy.nf'
+include {MERGE_READS; READ_STATS; READ_HIST; CONVERT_EXCEL; VALIDATE_SAMPLESHEET; CONVERT_READS; SUBSAMPLE_READS} from './modules/reads.nf'
+include {SAVONT_ASV; SAVONT_CLASSIFY; SAVONT_COMBINE} from './modules/taxonomy.nf'
 //include {EMU_ABUNDANCE; EMU_COMBINE} from './modules/taxonomy.nf'
 
 include {MAKE_REPORT} from './modules/report.nf'
@@ -59,35 +59,26 @@ workflow {
     
     
     CONVERT_READS(ch_reads) | READ_STATS
-    
     ch_reads_conv = CONVERT_READS.out
     
-    if (params.filter) {
-        FILTER_READS(ch_reads_conv)
-        ch_reads_savont = FILTER_READS.out.ch_filtered_reads
-        ch_filtered_counts = FILTER_READS.out.counts
-    } else {
-        ch_reads_savont = ch_reads_conv
-        ch_filtered_counts = Channel.empty()
-    }
+    ch_filtered_counts = Channel.empty()
     
     if (params.subsample) {
-        SUBSAMPLE_READS(ch_reads_emu)
-        ch_reads_savont = SUBSAMPLE_READS.out.reads
-        ch_subsampled_counts = SUBSAMPLE_READS.out.counts
+        SUBSAMPLE_READS(ch_reads_conv)
+        ch_reads_conv = SUBSAMPLE_READS.out.reads
+        ch_subsampled_stats = SUBSAMPLE_READS.out.stats
     } else {
-        ch_subsampled_counts = Channel.empty()
+        ch_subsampled_stats = Channel.empty()
     }
     
-    SAVONT_ASV(ch_reads_savont)
+    SAVONT_ASV(ch_reads_conv)
     SAVONT_CLASSIFY(SAVONT_ASV.out.ch_asvs)
+    SAVONT_COMBINE(SAVONT_CLASSIFY.out.ch_abundance.collect())
     
-    // MAKE_REPORT(
-    //     READ_STATS.out.counts.collect(),
-    //     ch_filtered_counts.collect().ifEmpty([]),
-    //     ch_subsampled_counts.collect().ifEmpty([]),
-    //     EMU_ABUNDANCE.out.counts.collect().ifEmpty([]),
-    //     EMU_ABUNDANCE.out.ch_abundance.collect().ifEmpty([]),
-    //     EMU_COMBINE.out.ch_combined
-    // )
+    MAKE_REPORT(
+        READ_STATS.out.stats.collect(),
+        SAVONT_ASV.out.counts.collect(),
+        SAVONT_CLASSIFY.out.ch_abundance.collect().ifEmpty([]),
+        SAVONT_COMBINE.out.ch_combined
+    )
 }

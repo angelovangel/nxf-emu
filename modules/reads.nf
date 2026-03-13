@@ -92,18 +92,16 @@ process READ_STATS {
         path reads
 
     output:
-        path "*readstats.tsv"
-        path "*.reads.txt", emit: counts
+        path "*readstats.tsv", emit: stats
 
     script:
     
     """
     faster -t ${reads} > ${reads.simpleName}.readstats.tsv
-    awk 'NR==2 {print \$2}' ${reads.simpleName}.readstats.tsv > ${reads.simpleName}.reads.txt
     """
 }
 
-process FILTER_READS {
+/* process FILTER_READS {
     container 'docker.io/aangeloo/nxf-tgs:latest'
     tag "${reads.simpleName}"
     //publishDir "${params.outdir}/00-basecall/filtered", mode: 'copy', pattern: '*readstats.tsv'
@@ -134,7 +132,7 @@ process FILTER_READS {
     awk 'NR==2 {print \$2}' ${reads.simpleName}.filtered.readstats.tsv > ${reads.simpleName}.filtered_reads.txt
     """
 }
-
+ */
 process SUBSAMPLE_READS {
     container 'docker.io/aangeloo/nxf-tgs:latest'
     tag "${reads.simpleName}"
@@ -144,16 +142,15 @@ process SUBSAMPLE_READS {
     
     output:
         path "*.fastq.gz", emit: reads
-        path "*.subsampled_reads.txt", emit: counts
+        path "*.subsampled.readstats.tsv", emit: stats
     
     script:
     """
     faster -p ${params.subsample} ${reads} > ${reads.simpleName}.subsampled.fastq
     pigz -c ${reads.simpleName}.subsampled.fastq > ${reads.simpleName}.subsampled.fastq.gz
     
-    # Get counts
+    # Get stats
     faster -t ${reads.simpleName}.subsampled.fastq.gz > ${reads.simpleName}.subsampled.readstats.tsv
-    awk 'NR==2 {print \$2}' ${reads.simpleName}.subsampled.readstats.tsv > ${reads.simpleName}.subsampled_reads.txt
     """
 }
 

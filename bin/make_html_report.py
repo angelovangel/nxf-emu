@@ -19,15 +19,21 @@ def parse_rel_abundance(file_path):
                     continue
                 abundance = float(row.get('abundance', 0))
                 if abundance > 0:
+                    try:
+                        counts = float(row.get('estimated counts', 0))
+                    except (ValueError, TypeError):
+                        counts = 0
                     data.append({
                         'species': row.get('species', 'Unknown'),
                         'genus': row.get('genus', 'Unknown'),
                         'family': row.get('family', 'Unknown'),
+                        'order': row.get('order', 'Unknown'),
                         'class': row.get('class', 'Unknown'),
                         'phylum': row.get('phylum', 'Unknown'),
+                        'clade': row.get('clade', 'Unknown'),
                         'superkingdom': row.get('superkingdom', 'Unknown'),
                         'abundance': abundance,
-                        'counts': float(row.get('estimated counts', 0))
+                        'counts': counts
                     })
     except Exception as e:
         print(f"Warning: Could not parse {file_path}: {e}", file=sys.stderr)
@@ -39,7 +45,7 @@ def parse_combined_abundance(file_path):
         with open(file_path, 'r') as f:
             reader = csv.DictReader(f, delimiter='\t')
             # Extract sample names (columns after the taxonomic ranks)
-            tax_cols = ['species', 'genus', 'family', 'order', 'class', 'phylum', 'superkingdom']
+            tax_cols = ['tax_id', 'species', 'genus', 'family', 'order', 'class', 'phylum', 'clade', 'superkingdom']
             data["samples"] = [col for col in reader.fieldnames if col not in tax_cols]
             
             for row in reader:
@@ -128,13 +134,7 @@ def main():
             display_val = val
             
             # Formatting logic matching nxf-alignment summary stats
-            if h in ['mapped', 'unmapped', 'mapped_filtered', 'mapped_unclassified']:
-                try:
-                    count_val = float(val)
-                    perc = (count_val / total_reads) * 100
-                    display_val = f"{int(count_val):,} ({perc:.1f}%)"
-                except: pass
-            elif h in ['raw_reads', 'filtered_reads', 'subsampled_reads']:
+            if h in ['raw_reads', 'filtered_reads', 'raw_n50']:
                 try: display_val = f"{int(float(val)):,}"
                 except: pass
             elif h != 'sample':
@@ -165,7 +165,7 @@ def main():
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Emu Abundance Report</title>
+    <title>Savont Abundance Report</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.2/dist/chart.umd.min.js"></script>
     <style>
@@ -211,11 +211,11 @@ def main():
 </head>
 <body class="bg-gray-100 min-h-screen p-6">
     <div class="max-w-7xl mx-auto space-y-8">
-        <!-- Pipeline Summary -->
+        <!-- Reads Summary -->
         <details class="collapsible-section" open>
             <summary>
                 <div class="flex justify-between items-center w-full pr-8">
-                    <h1 class="text-xl font-bold text-gray-900">Pipeline Summary</h1>
+                    <h1 class="text-xl font-bold text-gray-900">Reads Summary</h1>
                     <button onclick="downloadSummaryCSV(event)" class="flex items-center gap-2 px-3 py-1.5 bg-indigo-50 text-indigo-700 rounded-lg hover:bg-indigo-100 transition-colors text-sm font-semibold">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
                         Download CSV
@@ -244,7 +244,9 @@ def main():
                         <select id="rankSelect" class="w-full border-gray-300 rounded-md shadow-sm p-2 outline-none focus:ring-2 focus:ring-indigo-500">
                             <option value="superkingdom">Superkingdom</option>
                             <option value="phylum">Phylum</option>
+                            <option value="clade">Clade</option>
                             <option value="class">Class</option>
+                            <option value="order">Order</option>
                             <option value="family">Family</option>
                             <option value="genus" selected>Genus</option>
                             <option value="species">Species</option>
@@ -316,7 +318,7 @@ def main():
     html_content = html_content.replace('{{TABLE_ROWS}}', table_rows_html)
     html_content = html_content.replace('{{JS_CONTENT}}', js_content)
     
-    with open('nxf-emu-report.html', 'w') as f:
+    with open('nxf-savont-report.html', 'w') as f:
         f.write(html_content)
 
 if __name__ == "__main__":
