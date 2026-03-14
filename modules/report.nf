@@ -13,6 +13,7 @@ process MAKE_REPORT {
         path "nxf-savont-report.html"
 
     script:
+    def wf_cmd = workflow.commandLine.replace('"', '\\"')
     """
     echo -e "sample\\traw_reads\\traw_n50\\traw_Q20\\tfiltered_reads\\tasvs" > summary_counts.tsv
     
@@ -38,7 +39,17 @@ process MAKE_REPORT {
         echo -e "\$sample\\t\$raw_count\\t\$raw_n50\\t\$raw_q20\\t\$filtered_count\\t\$asvs" >> summary_counts.tsv
     done
 
+    # Write workflow info CSV
+    cat > wfinfo.csv << EOF
+Pipeline,${workflow.manifest.name ?: 'nxf-savont'}
+Version,${workflow.manifest.version ?: 'dev'}
+Nextflow version,${nextflow.version}
+Run name,${workflow.runName}
+Output dir,${params.outdir}
+Command line,"${wf_cmd}"
+EOF
+
     # Generate HTML report
-    make_html_report.py summary_counts.tsv combined_species.tsv taxonomy/*.tsv
+    make_html_report.py --summary summary_counts.tsv --combined combined_species.tsv --abundances taxonomy/*.tsv --wfinfo wfinfo.csv
     """
 }
