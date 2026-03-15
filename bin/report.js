@@ -402,17 +402,17 @@ function renderStandardTree() {
     // Clear previous view
     container.innerHTML = '<svg id="treeSvg" class="w-full h-full"></svg>';
     const svgEl = document.getElementById('treeSvg');
-    
+
     const sampleName = document.getElementById('treeSampleSelect').value;
     const sample = samples.find(s => s.name === sampleName);
-    
+
     if (!sample) return;
 
     // 1. Build hierarchical data
     const buildHierarchy = () => {
         const root = { name: "Life", children: [], tax_id: "root" };
         const ranks = ['superkingdom', 'phylum', 'class', 'order', 'family', 'genus', 'species'];
-        
+
         sample.data.forEach(t => {
             let current = root;
             if (t.abundance <= 0) return;
@@ -423,15 +423,15 @@ function renderStandardTree() {
 
                 let child = current.children.find(c => c.name === name);
                 if (!child) {
-                    child = { 
-                        name: name, 
-                        rank: rank, 
-                        children: [], 
+                    child = {
+                        name: name,
+                        rank: rank,
+                        children: [],
                         tax_id: (i === ranks.length - 1) ? t.tax_id : null
                     };
                     current.children.push(child);
                 }
-                
+
                 if (i === ranks.length - 1) {
                     child.value = (child.value || 0) + t.abundance;
                 }
@@ -459,13 +459,13 @@ function renderStandardTree() {
 
         const root = d3.hierarchy(data);
         root.sum(d => d.value || 0);
-        
+
         // Initial state: start fully expanded
         // To align ranks, we need a fixed level step
         const levelStep = (width - margin.left - margin.right) / 7;
 
         const treeLayout = d3.cluster().size([height - margin.top - margin.bottom, width - margin.left - margin.right]);
-        
+
         const radiusScale = d3.scaleSqrt()
             .domain([0, 1])
             .range([3, 18]);
@@ -504,7 +504,7 @@ function renderStandardTree() {
         displayRanks.forEach((rank, i) => {
             const x = (i + 1) * levelStep;
             const targetDepth = i + 1;
-            
+
             // Vertical dotted line
             svg.append("line")
                 .attr("x1", x).attr("x2", x)
@@ -603,7 +603,12 @@ function renderStandardTree() {
             nodeEnter.append("text")
                 .attr("dy", "0.31em")
                 .style("font-size", "11px")
-                .style("fill-opacity", 0);
+                .style("fill-opacity", 0)
+                .each(function() {
+                    const el = d3.select(this);
+                    el.append("tspan").attr("class", "name-tspan");
+                    el.append("tspan").attr("class", "pct-tspan").style("font-weight", "bold").style("fill", "#64748b");
+                });
 
             const nodeUpdate = nodeEnter.merge(node);
 
@@ -616,15 +621,22 @@ function renderStandardTree() {
                 .attr("fill", d => getPhylumColor(d))
                 .style("fill-opacity", d => (d._children || !d.children) ? 1 : 0.6); // Slightly fade expanded parent nodes
 
-            nodeUpdate.select("text")
-                .transition().duration(500)
+            const textUpdate = nodeUpdate.select("text");
+            
+            textUpdate.transition().duration(500)
                 .style("fill-opacity", 1)
                 .attr("x", d => d.children || d._children ? -(radiusScale(d.value) + 8) : (radiusScale(d.value) + 8))
-                .attr("text-anchor", d => d.children || d._children ? "end" : "start")
-                .text(d => {
-                    const pct = (d.value * 100).toFixed(1);
-                    return `${d.data.name} (${pct}%)`;
-                });
+                .attr("text-anchor", d => d.children || d._children ? "end" : "start");
+
+            textUpdate.select(".name-tspan")
+                .attr("x", d => d.children || d._children ? -(radiusScale(d.value) + 8) : (radiusScale(d.value) + 8))
+                .attr("dy", "-0.1em")
+                .text(d => d.data.name);
+
+            textUpdate.select(".pct-tspan")
+                .attr("x", d => d.children || d._children ? -(radiusScale(d.value) + 8) : (radiusScale(d.value) + 8))
+                .attr("dy", "1.3em")
+                .text(d => `${(d.value * 100).toFixed(1)}%`);
 
             nodeUpdate.select("title").remove();
             nodeUpdate.append("title")
@@ -636,6 +648,21 @@ function renderStandardTree() {
 
             nodeExit.select("circle").attr("r", 0);
             nodeExit.select("text").style("fill-opacity", 0);
+        }
+
+        // Initialize with a manageable expansion (≤ 10 nodes at the deepest possible level)
+        let bestDepth = 0;
+        for (let d = 1; d <= 7; d++) {
+            const count = root.descendants().filter(n => n.depth === d).length;
+            if (count > 10) break;
+            bestDepth = d;
+        }
+        
+        if (bestDepth > 0) {
+            expandToLevel(root, bestDepth);
+        } else {
+            // If even Superkingdom has > 10, just show Superkingdom collapsed
+            expandToLevel(root, 1);
         }
 
         update(root);
@@ -653,7 +680,7 @@ window.onload = () => {
     updateChart();
     renderHeatmap();
     renderStandardTree();
-    
+
     // Initial sort for summary table
     setTimeout(() => sortSummaryTable(0), 100);
 };
