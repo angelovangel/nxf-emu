@@ -26,6 +26,7 @@ def parse_rel_abundance(file_path):
                     except (ValueError, TypeError):
                         counts = 0
                     data.append({
+                        'tax_id': row.get('tax_id', 'Unknown'),
                         'species': row.get('species', 'Unknown'),
                         'genus': row.get('genus', 'Unknown'),
                         'family': row.get('family', 'Unknown'),
@@ -176,6 +177,7 @@ def main():
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.2/dist/chart.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/chroma-js/2.4.2/chroma.min.js"></script>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
     <style>
         body { font-family: 'Inter', sans-serif; }
         .heatmap-cell { transition: all 0.2s; }
@@ -276,7 +278,7 @@ def main():
         <details class="collapsible-section" open>
             <summary>
                 <div class="flex justify-between items-center w-full pr-8">
-                    <h1 class="text-xl font-bold text-gray-900">Summary</h1>
+                    <h1 class="text-xl text-gray-900">Summary</h1>
                     <button onclick="downloadSummaryCSV(event)" class="flex items-center gap-2 px-3 py-1.5 bg-indigo-50 text-indigo-700 rounded-lg hover:bg-indigo-100 transition-colors text-sm font-semibold">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
                         Download CSV
@@ -297,7 +299,7 @@ def main():
 
         <!-- Global Controls -->
         <details class="collapsible-section" open>
-            <summary><h1 class="text-xl font-bold text-gray-900">Report Controls</h1></summary>
+            <summary><h1 class="text-xl text-gray-900">Report Controls</h1></summary>
             <div class="section-content">
                 <div class="grid grid-cols-1 md:grid-cols-4 gap-4 bg-gray-50 p-4 rounded-xl">
                     <div>
@@ -351,7 +353,7 @@ def main():
 
         <!-- Abundance Plots -->
         <details class="collapsible-section" open>
-            <summary><h1 class="text-xl font-bold text-gray-900">Taxonomic Distribution</h1></summary>
+            <summary><h1 class="text-xl text-gray-900">Taxonomic Distribution</h1></summary>
             <div class="section-content">
                 <div id="chartContainer" class="relative min-h-[300px]">
                     <div id="chart-tooltip" class="absolute pointer-events-none z-50 p-3 bg-gray-800 text-white rounded shadow-xl opacity-0 transition-opacity duration-200 w-72 overflow-hidden"></div>
@@ -376,6 +378,24 @@ def main():
                     <div id="heatmapContainer" class="p-4 inline-block min-w-full">
                         <!-- Heatmap will be generated here -->
                     </div>
+                </div>
+            </div>
+        </details>
+
+        <!-- Tree Section -->
+        <details class="collapsible-section" open>
+            <summary><h1 class="text-xl text-gray-900">Phylogenetic Tree</h1></summary>
+            <div class="section-content">
+                <div class="mb-4 flex items-center gap-4 bg-gray-50 p-4 rounded-xl">
+                    <div class="flex-1">
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Select Sample for Tree View</label>
+                        <select id="treeSampleSelect" class="w-full border-gray-300 rounded-md shadow-sm p-2 outline-none focus:ring-2 focus:ring-indigo-500" onchange="renderStandardTree()">
+                            <!-- Options populated by JS -->
+                        </select>
+                    </div>
+                </div>
+                <div class="bg-white rounded-xl border border-gray-200 overflow-hidden relative min-h-[600px]" id="treeContainer">
+                    <svg id="treeSvg" class="w-full" style="min-height: 600px;"></svg>
                 </div>
             </div>
         </details>

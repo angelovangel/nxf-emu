@@ -152,10 +152,10 @@ let colorCache = {};
 function getColor(name, index, total) {
     if (name === 'Other') return '#9ca3af';
     if (colorCache[name]) return colorCache[name];
-    
+
     const scheme = document.getElementById('colorSchemeSelect').value;
     const colors = chroma.brewer[scheme] || chroma.scale(scheme).mode('lch').colors(Math.max(total, 10));
-    
+
     const color = colors[index % colors.length];
     colorCache[name] = color;
     return color;
@@ -382,10 +382,278 @@ function sortSummaryTable(columnIndex) {
     rows.forEach(row => tbody.appendChild(row));
 }
 
-// Initialize
-populateSampleSelector();
-updateChart();
-renderHeatmap();
+// --- Tree Logic (D3) ---
+function populateTreeSampleSelector() {
+    const select = document.getElementById('treeSampleSelect');
+    if (!select) return;
+    select.innerHTML = '';
+    samples.forEach(s => {
+        const opt = document.createElement('option');
+        opt.value = s.name;
+        opt.innerText = s.name;
+        select.appendChild(opt);
+    });
+}
 
-// Initial sort for summary table
-setTimeout(() => sortSummaryTable(0), 100); 
+function renderStandardTree() {
+    const container = document.getElementById('treeContainer');
+    if (!container) return;
+
+    // Clear previous view
+    container.innerHTML = '<svg id="treeSvg" class="w-full h-full"></svg>';
+    const svgEl = document.getElementById('treeSvg');
+    
+    const sampleName = document.getElementById('treeSampleSelect').value;
+    const sample = samples.find(s => s.name === sampleName);
+    
+    if (!sample) return;
+
+    // 1. Build hierarchical data
+    const buildHierarchy = () => {
+        const root = { name: "Life", children: [], tax_id: "root" };
+        const ranks = ['superkingdom', 'phylum', 'class', 'order', 'family', 'genus', 'species'];
+        
+        sample.data.forEach(t => {
+            let current = root;
+            if (t.abundance <= 0) return;
+
+            ranks.forEach((rank, i) => {
+                const name = t[rank];
+                if (!name || name === "Unknown") return;
+
+                let child = current.children.find(c => c.name === name);
+                if (!child) {
+                    child = { 
+                        name: name, 
+                        rank: rank, 
+                        children: [], 
+                        tax_id: (i === ranks.length - 1) ? t.tax_id : null
+                    };
+                    current.children.push(child);
+                }
+                
+                if (i === ranks.length - 1) {
+                    child.value = (child.value || 0) + t.abundance;
+                }
+                current = child;
+            });
+        });
+        return root;
+    };
+
+    const data = buildHierarchy();
+
+    try {
+        if (typeof d3 === 'undefined') {
+            throw new Error("D3 library not loaded.");
+        }
+
+        const width = container.clientWidth || 1000;
+        const height = 600;
+        const margin = { top: 40, right: 250, bottom: 20, left: 40 };
+
+        const svg = d3.select(svgEl)
+            .attr("viewBox", [0, 0, width, height])
+            .append("g")
+            .attr("transform", `translate(${margin.left},${margin.top})`);
+
+        const root = d3.hierarchy(data);
+        root.sum(d => d.value || 0);
+        
+        // Initial state: start fully expanded
+        // To align ranks, we need a fixed level step
+        const levelStep = (width - margin.left - margin.right) / 7;
+
+        const treeLayout = d3.cluster().size([height - margin.top - margin.bottom, width - margin.left - margin.right]);
+        
+        const radiusScale = d3.scaleSqrt()
+            .domain([0, 1])
+            .range([3, 18]);
+
+        const phylumColorScale = d3.scaleOrdinal(d3.schemeCategory10);
+        const defaultColor = "#94a3b8";
+
+        const getPhylumColor = (d) => {
+            let curr = d;
+            while (curr && curr.data.rank !== 'phylum') curr = curr.parent;
+            return curr ? phylumColorScale(curr.data.name) : defaultColor;
+        };
+
+        // Recursive expansion helper
+        function expandToLevel(node, targetDepth) {
+            if (node.depth < targetDepth) {
+                if (node._children) {
+                    node.children = node._children;
+                    node._children = null;
+                }
+            } else if (node.depth >= targetDepth) {
+                if (node.children) {
+                    node._children = node.children;
+                    node.children = null;
+                }
+            }
+            if (node.children) {
+                node.children.forEach(c => expandToLevel(c, targetDepth));
+            } else if (node._children) {
+                node._children.forEach(c => expandToLevel(c, targetDepth));
+            }
+        }
+
+        // Draw rank headers and guide lines
+        const displayRanks = ['Superkingdom', 'Phylum', 'Class', 'Order', 'Family', 'Genus', 'Species'];
+        displayRanks.forEach((rank, i) => {
+            const x = (i + 1) * levelStep;
+            const targetDepth = i + 1;
+            
+            // Vertical dotted line
+            svg.append("line")
+                .attr("x1", x).attr("x2", x)
+                .attr("y1", -20).attr("y2", height - margin.top - margin.bottom)
+                .attr("stroke", "#e2e8f0")
+                .attr("stroke-width", 1)
+                .attr("stroke-dasharray", "4,4");
+
+            // Rank label
+            svg.append("text")
+                .attr("x", x)
+                .attr("y", -10)
+                .attr("text-anchor", "middle")
+                .attr("class", "text-[10px] font-bold text-gray-400 uppercase tracking-widest cursor-pointer hover:text-indigo-600 transition-colors")
+                .style("cursor", "pointer")
+                .text(rank)
+                .on("click", () => {
+                    expandToLevel(root, targetDepth);
+                    update(root);
+                });
+        });
+
+        let nodeCount = 0;
+
+        function update(source) {
+            treeLayout(root);
+            const nodes = root.descendants();
+            const links = root.links();
+
+            // Align by rank
+            nodes.forEach(d => {
+                d.y = d.depth * levelStep;
+            });
+
+            // --- Links ---
+            const link = svg.selectAll(".link")
+                .data(links, d => d.target.id || (d.target.id = ++nodeCount));
+
+            const linkEnter = link.enter()
+                .append("path")
+                .attr("class", "link")
+                .attr("fill", "none")
+                .attr("stroke", d => getPhylumColor(d.target))
+                .attr("stroke-opacity", 0.4)
+                .attr("stroke-width", 1.5)
+                .attr("d", d => {
+                    const o = { x: source.x, y: source.y };
+                    return d3.linkHorizontal().x(d => d.y).y(d => d.x)({ source: o, target: o });
+                });
+
+            const linkUpdate = linkEnter.merge(link);
+            linkUpdate.transition().duration(500)
+                .attr("d", d3.linkHorizontal().x(d => d.y).y(d => d.x))
+                .attr("stroke", d => getPhylumColor(d.target));
+
+            link.exit().transition().duration(500)
+                .attr("d", d => {
+                    const o = { x: source.x, y: source.y };
+                    return d3.linkHorizontal().x(d => d.y).y(d => d.x)({ source: o, target: o });
+                })
+                .remove();
+
+            // --- Nodes ---
+            const node = svg.selectAll(".node")
+                .data(nodes, d => d.id || (d.id = ++nodeCount));
+
+            const nodeEnter = node.enter()
+                .append("g")
+                .attr("class", "node")
+                .attr("transform", d => `translate(${source.y},${source.x})`)
+                .style("cursor", "pointer")
+                .on("click", (event, d) => {
+                    if (d.children) {
+                        d._children = d.children;
+                        d.children = null;
+                    } else {
+                        d.children = d._children;
+                        d._children = null;
+                    }
+                    update(d);
+                });
+
+            // Hitbox for easy clicking
+            nodeEnter.append("circle")
+                .attr("r", 20)
+                .attr("fill", "transparent");
+
+            // Visible dot
+            nodeEnter.append("circle")
+                .attr("class", "visible-dot")
+                .attr("r", 0)
+                .attr("fill", d => getPhylumColor(d))
+                .attr("stroke", "#fff")
+                .attr("stroke-width", 1.5);
+
+            nodeEnter.append("text")
+                .attr("dy", "0.31em")
+                .style("font-size", "11px")
+                .style("fill-opacity", 0);
+
+            const nodeUpdate = nodeEnter.merge(node);
+
+            nodeUpdate.transition().duration(500)
+                .attr("transform", d => `translate(${d.y},${d.x})`);
+
+            nodeUpdate.select(".visible-dot")
+                .transition().duration(500)
+                .attr("r", d => radiusScale(d.value))
+                .attr("fill", d => getPhylumColor(d))
+                .style("fill-opacity", d => (d._children || !d.children) ? 1 : 0.6); // Slightly fade expanded parent nodes
+
+            nodeUpdate.select("text")
+                .transition().duration(500)
+                .style("fill-opacity", 1)
+                .attr("x", d => d.children || d._children ? -(radiusScale(d.value) + 8) : (radiusScale(d.value) + 8))
+                .attr("text-anchor", d => d.children || d._children ? "end" : "start")
+                .text(d => {
+                    const pct = (d.value * 100).toFixed(1);
+                    return `${d.data.name} (${pct}%)`;
+                });
+
+            nodeUpdate.select("title").remove();
+            nodeUpdate.append("title")
+                .text(d => `${d.data.name}\nAbundance: ${(d.value * 100).toFixed(4)}%`);
+
+            const nodeExit = node.exit().transition().duration(500)
+                .attr("transform", d => `translate(${source.y},${source.x})`)
+                .remove();
+
+            nodeExit.select("circle").attr("r", 0);
+            nodeExit.select("text").style("fill-opacity", 0);
+        }
+
+        update(root);
+
+    } catch (e) {
+        console.error("Tree rendering error:", e);
+        container.innerHTML += `<p class="text-red-500 p-4">Error rendering tree: ${e.message}</p>`;
+    }
+}
+
+// Initialize
+window.onload = () => {
+    populateSampleSelector();
+    populateTreeSampleSelector();
+    updateChart();
+    renderHeatmap();
+    renderStandardTree();
+    
+    // Initial sort for summary table
+    setTimeout(() => sortSummaryTable(0), 100);
+};
