@@ -68,35 +68,6 @@ def parse_combined_abundance(file_path):
         print(f"Warning: Could not parse combined results {file_path}: {e}", file=sys.stderr)
     return data
 
-def render_wfinfo_block(title, info_list):
-    if not info_list:
-        return ""
-    
-    html = f"""
-    <details style="padding-top: 5px; margin-top: 5px; text-align: left;">
-      <summary style="font-size: 0.8em; cursor: pointer; color: white;">{title}</summary>
-      <div style="padding-top: 5px; text-align: left; width: 100%;">
-        <table style="width: 100%; border-collapse: collapse; margin-top: 5px; color: white; border: none; background: inherit;">
-          <tbody>
-    """
-    
-    for i, (key, value) in enumerate(info_list):
-        if i > 0:
-            html += '<tr><td colspan="2" style="border-bottom: 1px solid rgba(255, 255, 255, 0.2); padding: 0;"></td></tr>'
-        display_key = key.replace('_', ' ').title()
-        html += f"""
-        <tr>
-          <td style="padding: 3px 10px 3px 0; font-weight: 500; border: none; background: inherit; font-family: 'Courier New', monospace; color: white; white-space: nowrap; font-size: 0.8em; width: 180px;">{display_key}:</td>
-          <td style="padding: 3px 0; border: none; background: inherit; font-family: 'Courier New', monospace; color: white; font-size: 0.8em;">{value}</td>
-        </tr>
-        """
-    
-    html += """
-          </tbody>
-        </table>
-      </div>
-    </details>
-    """
     return html
 
 def main():
@@ -104,27 +75,12 @@ def main():
     parser.add_argument('--summary', required=True, help='Summary TSV file')
     parser.add_argument('--combined', required=True, help='Combined TSV file')
     parser.add_argument('--abundances', nargs='*', help='Relative abundance TSV files', default=[])
-    parser.add_argument('--wfinfo', help='Optional CSV file with workflow properties', default=None)
     
     args = parser.parse_args()
 
     summary_tsv = args.summary
     combined_tsv = args.combined
     rel_abundance_files = args.abundances
-
-    # Parse workflow info if provided
-    wf_info = []
-    if args.wfinfo:
-        try:
-            with open(args.wfinfo, 'r') as f:
-                reader = csv.reader(f)
-                for row in reader:
-                    if len(row) >= 2:
-                        wf_info.append((row[0], row[1]))
-        except Exception as e:
-            print(f"Warning: Could not parse workflow info {args.wfinfo}: {e}", file=sys.stderr)
-    
-    wf_info_block = render_wfinfo_block("Workflow details", wf_info)
 
     # Parse summary counts
     summary_data = []
@@ -315,7 +271,6 @@ def main():
                 </div>
                 <div class="report-datetime">{REPORT_DATETIME}</div>
             </div>
-            {{WF_INFO}}
         </div>
         <!-- Summary -->
         <details class="collapsible-section" open>
@@ -435,7 +390,6 @@ def main():
     html_content = html_template.replace('{{TABLE_HEADER}}', table_header_html)
     html_content = html_content.replace('{{TABLE_ROWS}}', table_rows_html)
     html_content = html_content.replace('{{JS_CONTENT}}', js_content)
-    html_content = html_content.replace('{{WF_INFO}}', wf_info_block)
     html_content = html_content.replace('{REPORT_DATETIME}', datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
     
     with open('nxf-savont-report.html', 'w') as f:

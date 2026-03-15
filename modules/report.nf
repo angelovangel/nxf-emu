@@ -9,11 +9,9 @@ process MAKE_REPORT {
         path "combined_species.tsv"
 
     output:
-        //path "summary_counts.tsv"
         path "nxf-savont-report.html"
 
     script:
-    def wf_cmd = workflow.commandLine.replace('"', '\\"')
     """
     echo -e "sample\\traw_reads\\traw_n50\\traw_Q20\\tfiltered_reads\\tasvs" > summary_counts.tsv
     
@@ -39,17 +37,31 @@ process MAKE_REPORT {
         echo -e "\$sample\\t\$raw_count\\t\$raw_n50\\t\$raw_q20\\t\$filtered_count\\t\$asvs" >> summary_counts.tsv
     done
 
-    # Write workflow info CSV
-    cat > wfinfo.csv << EOF
-Pipeline,${workflow.manifest.name ?: 'nxf-savont'}
-Version,${workflow.manifest.version ?: 'dev'}
-Nextflow version,${nextflow.version}
-Run name,${workflow.runName}
-Output dir,${params.outdir}
-Command line,"${wf_cmd}"
-EOF
-
     # Generate HTML report
-    make_html_report.py --summary summary_counts.tsv --combined combined_species.tsv --abundances taxonomy/*.tsv --wfinfo wfinfo.csv
+    make_html_report.py --summary summary_counts.tsv --combined combined_species.tsv --abundances taxonomy/*.tsv
+    """
+}
+
+process VERSIONS {
+    publishDir "${params.outdir}/logs", mode: 'copy'
+    container 'docker.io/aangeloo/nxf-tgs:latest'
+    
+    input:
+    path 'versions*.txt'
+    path summary_file
+    
+    output:
+    path "nxf-savont-execution-summary.txt"
+
+    script:
+    """
+    echo -e "\nSoftware Versions" > software_versions.txt
+    echo -e "-----------------------------------------" >> software_versions.txt
+    
+    for f in \$(ls versions*.txt | sort -V); do
+        awk -F ': ' '{ if (NF>1) printf "%-25s: %s\\n", \$1, \$2; else print \$0 }' \$f >> software_versions.txt
+    done
+    
+    cat $summary_file software_versions.txt > nxf-savont-execution-summary.txt
     """
 }

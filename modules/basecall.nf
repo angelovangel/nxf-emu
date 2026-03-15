@@ -13,6 +13,7 @@ process DORADO_BASECALL {
 
     output:
         path "*.bam"
+        path "versions.txt", emit: versions
 
     script:
     """
@@ -35,6 +36,11 @@ process DORADO_BASECALL {
     echo "samplename: \$samplename"
     echo "clean name: \$clean_name"
     mv reads.bam \$clean_name.bam
+
+    cat <<EOF > versions.txt
+    ${task.process}: dorado \$(dorado --version 2>&1 | sed 's/dorado //')
+    ${task.process}: samtools \$(samtools --version | head -n 1 | awk '{print \$2}')
+    EOF
     """
 }
 
@@ -50,6 +56,7 @@ process DORADO_BASECALL_BARCODING {
 
     output:
         path "bam_pass", type: 'dir', emit: ch_bam_pass
+        path "versions.txt", emit: versions
 
     script:
     """
@@ -58,5 +65,8 @@ process DORADO_BASECALL_BARCODING {
     [ -d "basecalls" ] || { echo "Basecalls output folder empty!" >&2; exit 1; }
     ln -s basecalls/*/*/*/bam_pass bam_pass
 
+    cat <<EOF > versions.txt
+    ${task.process}: dorado \$(dorado --version 2>&1 | sed 's/dorado //')
+    EOF
     """
 }

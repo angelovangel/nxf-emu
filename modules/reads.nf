@@ -8,10 +8,15 @@ process CONVERT_EXCEL {
 
     output:
         path("*.csv")
+        path "versions.txt", emit: versions
 
     script:
     """
     convert_excel.R $excelfile
+
+    cat <<EOF > versions.txt
+    ${task.process}: R \$(R --version | head -n 1 | awk '{print \$3}')
+    EOF
     """
 }
 
@@ -25,11 +30,16 @@ process VALIDATE_SAMPLESHEET {
 
     output:
     path("samplesheet-validated.csv")
+    path "versions.txt", emit: versions
 
 
     script:
     """
     validate_samplesheet.R $csv
+
+    cat <<EOF > versions.txt
+    ${task.process}: R \$(R --version | head -n 1 | awk '{print \$3}')
+    EOF
     """
 }
 
@@ -51,6 +61,7 @@ process MERGE_READS {
     
     output: 
         path('*{fastq.gz,fastq,bam}')
+        path "versions.txt", emit: versions
     
     script:
     """
@@ -59,6 +70,10 @@ process MERGE_READS {
     else
         exit 42
     fi
+
+    cat <<EOF > versions.txt
+    ${task.process}: samtools \$(samtools --version | head -n 1 | awk '{print \$2}')
+    EOF
     """
 }
 
@@ -72,6 +87,7 @@ process CONVERT_READS {
 
     output:
         path "*fastq.gz", includeInputs: true
+        path "versions.txt", emit: versions
     
     script:
     """
@@ -80,6 +96,11 @@ process CONVERT_READS {
     elif [[ ${reads.extension} == "fastq" || ${reads.extension} == "fq" ]]; then
         pigz -c ${reads} > ${reads.simpleName}.fastq.gz
     fi
+
+    cat <<EOF > versions.txt
+    ${task.process}: samtools \$(samtools --version | head -n 1 | awk '{print \$2}')
+    ${task.process}: pigz \$(pigz --version 2>&1 | awk '{print \$2}')
+    EOF
     """
 }
 
@@ -93,46 +114,19 @@ process READ_STATS {
 
     output:
         path "*readstats.tsv", emit: stats
+        path "versions.txt", emit: versions
 
     script:
     
     """
     faster -t ${reads} > ${reads.simpleName}.readstats.tsv
+
+    cat <<EOF > versions.txt
+    ${task.process}: faster \$(faster --version 2>&1 | awk '{print \$2}')
+    EOF
     """
 }
 
-/* process FILTER_READS {
-    container 'docker.io/aangeloo/nxf-tgs:latest'
-    tag "${reads.simpleName}"
-    //publishDir "${params.outdir}/00-basecall/filtered", mode: 'copy', pattern: '*readstats.tsv'
-    errorStrategy {
-        if (task.exitStatus == 42) {
-            println "FILTER_READS: [WARNING] ${reads} has no reads after filtering. Ignoring."
-            return 'ignore'
-        }
-        return 'ignore'
-    }
-    
-    input:
-        path reads
-
-    output:
-        path "*fastq.gz", emit: ch_filtered_reads
-        path "*readstats.tsv"
-        path "*.filtered_reads.txt", emit: counts
-    
-    script:
-    """
-    faster --filterl 1000 $reads | faster --filterl -2000 - > ${reads.simpleName}.filtered.fastq
-    if [ \$(wc -l < ${reads.simpleName}.filtered.fastq) -eq 0 ]; then
-        exit 42
-    fi
-    pigz -c ${reads.simpleName}.filtered.fastq > ${reads.simpleName}.filtered.fastq.gz
-    faster -t ${reads.simpleName}.filtered.fastq.gz > ${reads.simpleName}.filtered.readstats.tsv
-    awk 'NR==2 {print \$2}' ${reads.simpleName}.filtered.readstats.tsv > ${reads.simpleName}.filtered_reads.txt
-    """
-}
- */
 process SUBSAMPLE_READS {
     container 'docker.io/aangeloo/nxf-tgs:latest'
     tag "${reads.simpleName}"
@@ -143,6 +137,7 @@ process SUBSAMPLE_READS {
     output:
         path "*.fastq.gz", emit: reads
         path "*.subsampled.readstats.tsv", emit: stats
+        path "versions.txt", emit: versions
     
     script:
     """
@@ -151,6 +146,10 @@ process SUBSAMPLE_READS {
     
     # Get stats
     faster -t ${reads.simpleName}.subsampled.fastq.gz > ${reads.simpleName}.subsampled.readstats.tsv
+
+    cat <<EOF > versions.txt
+    ${task.process}: faster \$(faster --version 2>&1 | awk '{print \$2}')
+    EOF
     """
 }
 
@@ -163,6 +162,7 @@ process READ_HIST {
 
     output:
         path "*.hist"
+        path "versions.txt", emit: versions
 
     script:
     """
@@ -175,5 +175,11 @@ process READ_HIST {
         faster2 --gc ${reads}   | bincount.awk -v type=gc   | sort -n > ${reads.simpleName}.gc.hist
         fasterplot -q ${reads} | sort -n > ${reads.simpleName}.qual.hist
     fi
+
+    cat <<EOF > versions.txt
+    ${task.process}: samtools \$(samtools --version | head -n 1 | awk '{print \$2}')
+    ${task.process}: faster2 \$(faster2 --version 2>&1 | awk '{print \$2}')
+    ${task.process}: fasterplot \$(fasterplot --version 2>&1 | awk '{print \$2}')
+    EOF
     """
 }
