@@ -41,10 +41,10 @@ process MAKE_REPORT {
     # Write workflow info CSV
     cat > wfinfo.csv << EOF
     Pipeline,${workflow.manifest.name ?: 'nxf-savont'}
-    Version,${workflow.manifest.version ?: 'dev'}
-    Nextflow version,${nextflow.version}
-    Workflow script ID,${workflow.scriptId.take(10)}
+    Workflow version,${workflow.manifest.version ?: 'dev'}
+    Workflow revision,${workflow.scriptId.take(10)}
     Run name,${workflow.runName}
+    Nextflow version,${nextflow.version}
     Command line,"${wf_cmd}"
     EOF
 

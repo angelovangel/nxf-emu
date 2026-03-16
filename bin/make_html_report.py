@@ -196,7 +196,8 @@ def main():
             elif h != 'sample':
                 try: 
                     fval = float(val)
-                    display_val = f"{int(fval):,}" if fval.is_integer() else f"{fval:.2f}"
+                    # display_val = f"{int(fval):,}" if fval.is_integer() else f"{fval:.2f}"
+                    display_val = f"{val:,}" if isinstance(val, int) else f"{val:,.2f}"
                 except: pass
             
             alignment = "text-right" if h != 'sample' else "text-left sample-col"

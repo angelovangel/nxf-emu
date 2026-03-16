@@ -98,7 +98,7 @@ function renderHeatmap() {
         if (!aggregated[taxonName]) {
             aggregated[taxonName] = new Array(heatmapData.samples.length).fill(0);
             taxonTaxidSets[taxonName] = new Set();
-            
+
             // Capture lineage up to current rank
             const lineage = [];
             for (let i = 0; i <= rankIndex; i++) {
@@ -227,7 +227,7 @@ function showTaxonTooltip(e, taxid, name, lineageJson) {
         <div id="tooltip-header" class="border-none bg-gray-50">
             <div>
                 <div class="text-[10px] text-gray-400 uppercase tracking-wider font-bold leading-tight">Taxonomic Hierarchy</div>
-                <div class="text-sm font-semibold text-gray-900">${name}</div>
+                <div class="text-sm font-semibold italic text-gray-900">${name}</div>
                 ${taxid ? `<div class="text-[10px] text-gray-400 font-mono">TaxID: ${taxid}</div>` : ''}
             </div>
         </div>
