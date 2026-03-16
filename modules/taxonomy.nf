@@ -86,3 +86,24 @@ process SAVONT_COMBINE {
     EOF
     """
 }
+
+process TAXONKIT_LINEAGE {
+    container 'docker.io/aangeloo/nxf-savont:latest'
+    publishDir "${params.outdir}/01-taxonomy/lineage", mode: 'copy', pattern: "*.tsv"
+
+    input:
+        path abundance_file
+
+    output:
+        path "${abundance_file.simpleName}_lineage.tsv", emit: ch_lineage
+        path "versions.txt", emit: versions
+
+    script:
+    """
+    cut -f1,2 $abundance_file | taxonkit lineage -d '\t' > ${abundance_file.simpleName}_lineage.tsv
+    
+    cat <<EOF > versions.txt
+    ${task.process}: taxonkit \$(taxonkit --version 2>&1 | sed 's/taxonkit //')
+    EOF
+    """
+}
