@@ -87,21 +87,46 @@ function renderHeatmap() {
 
     // Aggregate by selected rank
     const aggregated = {};
+    const taxonTaxidSets = {}; // taxonName -> Set(taxids)
+    const taxonLineages = {}; // taxonName -> lineage object
+
+    const ranks = ['superkingdom', 'phylum', 'clade', 'class', 'order', 'family', 'genus', 'species'];
+    const rankIndex = ranks.indexOf(rank);
+
     heatmapData.taxa.forEach(t => {
         const taxonName = t[rank] || 'Unknown';
         if (!aggregated[taxonName]) {
             aggregated[taxonName] = new Array(heatmapData.samples.length).fill(0);
+            taxonTaxidSets[taxonName] = new Set();
+            
+            // Capture lineage up to current rank
+            const lineage = [];
+            for (let i = 0; i <= rankIndex; i++) {
+                const r = ranks[i];
+                if (t[r] && t[r] !== 'Unknown') {
+                    lineage.push({ rank: r, name: t[r] });
+                }
+            }
+            taxonLineages[taxonName] = lineage;
         }
         t.abundances.forEach((val, i) => {
             aggregated[taxonName][i] += val;
         });
+        if (rank === 'species' && t.tax_id && t.tax_id !== 'Unknown' && t.tax_id !== '0') {
+            taxonTaxidSets[taxonName].add(t.tax_id);
+        }
     });
 
-    const allTaxa = Object.keys(aggregated).map(name => ({
-        name: name,
-        sum: sampleIndices.reduce((acc, idx) => acc + (aggregated[name][idx] || 0), 0),
-        abundances: aggregated[name]
-    }))
+    const allTaxa = Object.keys(aggregated).map(name => {
+        const ids = Array.from(taxonTaxidSets[name]);
+        return {
+            name: name,
+            sum: sampleIndices.reduce((acc, idx) => acc + (aggregated[name][idx] || 0), 0),
+            abundances: aggregated[name],
+            taxid: ids.length === 1 ? ids[0] : null,
+            lineage: taxonLineages[name]
+        };
+    })
         .filter(t => t.sum > 0)
         .sort((a, b) => b.sum - a.sum);
 
@@ -133,7 +158,11 @@ function renderHeatmap() {
     // Rows
     sortedTaxa.forEach(t => {
         const isOther = t.name === 'Other';
-        html += `<tr><td class="p-2 font-medium ${isOther ? 'bg-gray-50 italic' : 'bg-white'} border sticky left-0 z-10 whitespace-nowrap shadow-sm">${t.name}</td>`;
+        const taxidAttr = t.taxid ? `data-taxid="${t.taxid}"` : '';
+        const lineageAttr = t.lineage ? `data-lineage='${JSON.stringify(t.lineage).replace(/'/g, "&apos;")}'` : '';
+        const hoverClass = (t.taxid || t.lineage) ? 'taxon-hover cursor-help underline decoration-dotted decoration-indigo-300 underline-offset-4' : '';
+
+        html += `<tr><td class="p-2 font-medium ${isOther ? 'bg-gray-50 italic' : 'bg-white'} border sticky left-0 z-10 whitespace-nowrap shadow-sm ${hoverClass}" ${taxidAttr} ${lineageAttr}>${t.name}</td>`;
         sampleIndices.forEach(idx => {
             const val = t.abundances[idx] || 0;
             const { bg, text } = getHeatmapColor(val);
@@ -145,6 +174,113 @@ function renderHeatmap() {
     });
     html += '</tbody></table>';
     container.innerHTML = html;
+
+    // Attach hover listeners
+    container.querySelectorAll('.taxon-hover').forEach(el => {
+        el.onmouseenter = (e) => showTaxonTooltip(e, el.dataset.taxid, el.innerText, el.dataset.lineage);
+        el.onmouseleave = hideTaxonTooltip;
+    });
+}
+
+let tooltipTimeout = null;
+
+function showTaxonTooltip(e, taxid, name, lineageJson) {
+    const tooltip = document.getElementById('heatmap-tooltip');
+    if (!tooltip) return;
+
+    if (tooltipTimeout) {
+        clearTimeout(tooltipTimeout);
+        tooltipTimeout = null;
+    }
+
+    let lineageHtml = '';
+    if (lineageJson) {
+        try {
+            const lineage = JSON.parse(lineageJson);
+            lineageHtml = '<div class="px-4 py-2 bg-white border-b border-gray-100">';
+            lineage.forEach((item, idx) => {
+                const isLast = idx === lineage.length - 1;
+                const indent = idx * 12;
+                lineageHtml += `
+                    <div style="padding-left: ${indent}px; display: flex; align-items: center; gap: 8px;">
+                        ${idx > 0 ? '<span class="text-gray-300">└─</span>' : ''}
+                        <span class="text-[11px] ${isLast ? 'font-bold text-gray-900' : 'text-gray-500'}">${item.name}</span>
+                    </div>
+                `;
+            });
+            lineageHtml += '</div>';
+        } catch (err) {
+            console.error("Error parsing lineage JSON", err);
+        }
+    }
+
+    const ncbiLink = taxid ? `
+        <div class="p-4 pt-2 bg-white">
+            <a href="https://www.ncbi.nlm.nih.gov/datasets/taxonomy/${taxid}/" target="_blank" class="flex items-center gap-2 text-indigo-600 hover:text-indigo-800 text-xs font-semibold">
+                <span>View NCBI Taxonomy</span>
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path></svg>
+            </a>
+        </div>
+    ` : '';
+
+    tooltip.innerHTML = `
+        <div id="tooltip-header" class="border-none bg-gray-50">
+            <div>
+                <div class="text-[10px] text-gray-400 uppercase tracking-wider font-bold leading-tight">Taxonomic Hierarchy</div>
+                <div class="text-sm font-semibold text-gray-900">${name}</div>
+                ${taxid ? `<div class="text-[10px] text-gray-400 font-mono">TaxID: ${taxid}</div>` : ''}
+            </div>
+        </div>
+        ${lineageHtml}
+        ${ncbiLink}
+    `;
+
+    tooltip.style.width = '280px';
+    tooltip.style.display = 'flex';
+
+    // Position handling - place to the right of the mouse
+    // We use a small horizontal offset (10px) to prevent flickering 
+    // but keep it close enough to maintain the "safe zone" for the mouse.
+    let x = e.clientX + 10;
+    let y = e.clientY - 20; // Slightly above to align better with the text line
+
+    const rect = tooltip.getBoundingClientRect();
+
+    // Check horizontal viewport bounds
+    if (x + rect.width > window.innerWidth) {
+        x = e.clientX - rect.width - 20; // Flip to left if no space on right
+    }
+
+    // Check vertical viewport bounds
+    if (y + rect.height > window.innerHeight) {
+        y = window.innerHeight - rect.height - 20;
+    }
+
+    if (x < 10) x = 10;
+    if (y < 10) y = 10;
+
+    tooltip.style.left = x + 'px';
+    tooltip.style.top = y + 'px';
+
+    tooltip.onmouseenter = () => {
+        if (tooltipTimeout) {
+            clearTimeout(tooltipTimeout);
+            tooltipTimeout = null;
+        }
+    };
+    tooltip.onmouseleave = hideTaxonTooltip;
+}
+
+function hideTaxonTooltip() {
+    const tooltip = document.getElementById('heatmap-tooltip');
+    if (tooltip) {
+        if (tooltipTimeout) clearTimeout(tooltipTimeout);
+        tooltipTimeout = setTimeout(() => {
+            if (!tooltip.matches(':hover')) {
+                tooltip.style.display = 'none';
+            }
+        }, 300); // Increased timeout for better feel
+    }
 }
 
 // --- Chart Logic ---

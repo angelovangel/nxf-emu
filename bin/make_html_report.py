@@ -306,9 +306,65 @@ def main():
             text-decoration: none;
         }
         .repo-link:hover { opacity: 1; }
+
+        /* Heatmap Taxon Tooltip */
+        #heatmap-tooltip {
+            position: fixed;
+            z-index: 1000;
+            background: rgba(255, 255, 255, 0.98);
+            backdrop-filter: blur(12px);
+            border: 1px solid #e5e7eb;
+            border-radius: 1rem;
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+            padding: 0;
+            pointer-events: auto;
+            display: none;
+            width: 300px;
+            height: auto;
+            max-height: none;
+            box-sizing: border-box; 
+            overflow: visible;
+            flex-direction: column;
+            font-family: inherit;
+        }
+        #tooltip-header {
+            padding: 0.75rem 1rem;
+            border-bottom: 1px solid #f3f4f6;
+            background: #f9fafb;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        #tooltip-header a {
+            color: #4f46e5;
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 0.8rem;
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+        }
+        #tooltip-iframe {
+            width: 100%;
+            height: 100%;
+            border: none;
+            background: white;
+        }
+        .tooltip-loading {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: #9ca3af;
+            font-size: 0.8rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
     </style>
 </head>
 <body class="bg-gray-100 min-h-screen p-6">
+    <div id="heatmap-tooltip"></div>
     <div class="max-w-7xl mx-auto space-y-8">
         <!-- Report Header -->
         <div class="report-header">
