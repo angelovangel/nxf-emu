@@ -115,7 +115,7 @@ function renderHeatmap() {
             // Capture lineage up to current rank
             let lineage = [];
             const taxonKitLineage = lineageData[t.tax_id];
-            
+
             if (taxonKitLineage) {
                 const rankIdx = taxonKitLineage.findIndex(l => l.name === taxonName);
                 if (rankIdx !== -1) {

@@ -40,7 +40,7 @@ process SAVONT_ASV {
 process SAVONT_CLASSIFY {
     container 'docker.io/aangeloo/nxf-savont:latest'
     tag "${asvs.simpleName}"
-    publishDir "${params.outdir}/01-taxonomy", mode: 'copy', pattern: "*.tsv"
+    //publishDir "${params.outdir}/01-taxonomy", mode: 'copy', pattern: "*.tsv"
 
     input:
         path asvs
@@ -66,20 +66,20 @@ process SAVONT_CLASSIFY {
     """
 }
 
-process SAVONT_COMBINE {
+process COMBINE_LINEAGE {
     container 'docker.io/aangeloo/nxf-tgs:latest'
     publishDir "${params.outdir}/01-taxonomy", mode: 'copy', pattern: "*.tsv"
 
     input:
-        path "abundances/*"
+        path "lineages/*"
 
     output:
-        path "savont-combined-species.tsv", emit: ch_combined
+        path "lineage-combined.tsv", emit: ch_combined
         path "versions.txt", emit: versions
 
     script:
     """
-    combine_savont.py savont-combined-species.tsv abundances/*.tsv
+    combine_lineage.py lineage-combined.tsv lineages/*.tsv
 
     cat <<EOF > versions.txt
     ${task.process}: python \$(python3 --version | awk '{print \$2}')
