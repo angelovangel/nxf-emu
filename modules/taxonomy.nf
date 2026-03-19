@@ -89,6 +89,7 @@ process COMBINE_LINEAGE {
 
 process TAXONKIT_LINEAGE {
     container 'docker.io/aangeloo/nxf-savont:latest'
+    tag "${abundance_file.simpleName}"
     publishDir "${params.outdir}/01-taxonomy/lineage", mode: 'copy', pattern: "*.tsv"
 
     input:

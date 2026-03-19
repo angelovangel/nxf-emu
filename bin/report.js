@@ -898,29 +898,37 @@ function renderRarefaction() {
     const x = d3.scaleLinear().domain([0,xMax*1.02]).range([0,iW]);
     const y = d3.scaleLinear().domain([0,yMax*1.1]).range([iH,0]);
     
-    g.append("g").attr("class","grid").attr("transform",`translate(0,${iH})`)
+    svg.append("defs").append("clipPath")
+      .attr("id", "clip-rarefaction")
+      .append("rect")
+      .attr("width", iW)
+      .attr("height", iH);
+    
+    g.append("g").attr("class","grid x-grid").attr("transform",`translate(0,${iH})`)
       .call(d3.axisBottom(x).tickSize(-iH).tickFormat("").tickSizeOuter(0))
       .selectAll("line").attr("stroke", "#e8e8e8").attr("stroke-dasharray", "3,3");
       
-    g.append("g").attr("class","grid")
+    g.append("g").attr("class","grid y-grid")
       .call(d3.axisLeft(y).tickSize(-iW).tickFormat("").tickSizeOuter(0))
       .selectAll("line").attr("stroke", "#e8e8e8").attr("stroke-dasharray", "3,3");
       
     g.selectAll(".domain").remove();
     
-    g.append("g").attr("class","axis").attr("transform",`translate(0,${iH})`)
+    g.append("g").attr("class","axis x-axis").attr("transform",`translate(0,${iH})`)
       .call(d3.axisBottom(x).tickFormat(d3.format(",d")))
       .append("text").attr("x",iW/2).attr("y",40)
         .attr("fill","#333").attr("text-anchor","middle").style("font-size","12px")
         .text("Sequencing Depth (reads)");
         
-    g.append("g").attr("class","axis").call(d3.axisLeft(y).ticks(6))
+    g.append("g").attr("class","axis y-axis").call(d3.axisLeft(y).ticks(6))
       .append("text").attr("transform","rotate(-90)").attr("x",-iH/2).attr("y",-50)
         .attr("fill","#333").attr("text-anchor","middle").style("font-size","12px")
         .text("Observed Species (Richness)");
         
     const areaGen = d3.area().x(d=>x(d.depth)).y0(d=>y(Math.max(0,d.mean-d.std))).y1(d=>y(d.mean+d.std));
     const lineGen = d3.line().x(d=>x(d.depth)).y(d=>y(d.mean));
+    
+    const plotArea = g.append("g").attr("clip-path", "url(#clip-rarefaction)");
     
     const sampleGroups = {};
     const muted = {};
@@ -930,7 +938,7 @@ function renderRarefaction() {
     const tooltip = document.getElementById('rarefactionTooltip');
     
     activeSamples.forEach((s, i) => {
-      const grp = g.append("g");
+      const grp = plotArea.append("g");
       sampleGroups[s] = grp;
       muted[s] = false;
       const c = getColor("sample_" + s, i, activeSamples.length);
@@ -988,6 +996,29 @@ function renderRarefaction() {
             svg.selectAll(".band").style("display", this.checked ? null : "none"); 
         };
     }
+    
+    // Zoom Behavior
+    const zoom = d3.zoom()
+        .scaleExtent([1, 20])
+        .extent([[0, 0], [iW, iH]])
+        .translateExtent([[0, 0], [iW, iH]])
+        .on("zoom", (event) => {
+            const newX = event.transform.rescaleX(x);
+            
+            g.select(".x-axis").call(d3.axisBottom(newX).tickFormat(d3.format(",d")));
+            g.select(".x-grid").call(d3.axisBottom(newX).tickSize(-iH).tickFormat("").tickSizeOuter(0))
+               .selectAll("line").attr("stroke", "#e8e8e8").attr("stroke-dasharray", "3,3");
+            g.select(".x-grid").selectAll(".domain").remove();
+            
+            const newAreaGen = d3.area().x(d=>newX(d.depth)).y0(d=>y(Math.max(0,d.mean-d.std))).y1(d=>y(d.mean+d.std));
+            const newLineGen = d3.line().x(d=>newX(d.depth)).y(d=>y(d.mean));
+            
+            plotArea.selectAll(".band").attr("d", newAreaGen);
+            plotArea.selectAll(".line").attr("d", newLineGen);
+            plotArea.selectAll(".dot").attr("cx", d=>newX(d.depth));
+        });
+        
+    svg.call(zoom);
 }
 
 // Initialize

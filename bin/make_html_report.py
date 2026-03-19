@@ -431,6 +431,7 @@ def main():
                 </div>
             </summary>
             <div class="section-content">
+                <p class="text-sm text-gray-500 mb-4">Overview of sequencing reads metrics and initial processing statistics per sample.</p>
                 <div class="overflow-x-auto border rounded-xl">
                     <table id="summaryTable" class="min-w-full divide-y divide-gray-200">
                         <thead class="bg-gray-50">
@@ -446,6 +447,7 @@ def main():
         <details class="collapsible-section" open>
             <summary><h1 class="text-xl text-gray-900">Report Controls</h1></summary>
             <div class="section-content">
+                <p class="text-sm text-gray-500 mb-4">Global settings to adjust the taxonomic rank, color scheme, and visible samples for the entire report.</p>
                 <div class="grid grid-cols-1 md:grid-cols-4 gap-4 bg-gray-50 p-4 rounded-xl">
                     <div>
                         <label class="block text-sm font-medium text-gray-700 mb-1">Color Scheme</label>
@@ -500,6 +502,7 @@ def main():
         <details class="collapsible-section" open>
             <summary><h1 class="text-xl text-gray-900">Taxonomic Distribution</h1></summary>
             <div class="section-content">
+                <p class="text-sm text-gray-500 mb-4">Relative abundance bar charts exhibiting the proportional composition of the most prevalent taxonomic groups.</p>
                 <div id="chartContainer" class="relative min-h-[300px]">
                     <div id="chart-tooltip" class="absolute pointer-events-none z-50 p-3 bg-gray-800 text-white rounded shadow-xl opacity-0 transition-opacity duration-200 w-72 overflow-hidden"></div>
                     <canvas id="chartCanvas"></canvas>
@@ -511,6 +514,7 @@ def main():
         <details class="collapsible-section" open>
             <summary><h1 class="text-xl text-gray-900">Alpha Rarefaction Curve</h1></summary>
             <div class="section-content">
+                <p class="text-sm text-gray-500 mb-4">Species richness (observed taxons) as a function of sequencing depth to assess coverage saturation.</p>
                 <div id="rarefactionControls" class="flex gap-4 mb-4">
                     <label class="flex items-center text-sm font-medium text-gray-700 cursor-pointer">
                         <input type="checkbox" id="toggleBand" checked class="mr-2 rounded text-indigo-600 focus:ring-indigo-500">
@@ -536,6 +540,7 @@ def main():
                 </div>
             </summary>
             <div class="section-content">
+                <p class="text-sm text-gray-500 mb-4">Detailed heat matrix comparing the relative abundance of specific taxa across all chosen samples.</p>
                 <div class="overflow-x-auto border rounded-xl bg-gray-50">
                     <div id="heatmapContainer" class="p-4 inline-block min-w-full">
                         <!-- Heatmap will be generated here -->
@@ -548,6 +553,7 @@ def main():
         <details class="collapsible-section" open>
             <summary><h1 class="text-xl text-gray-900">Phylogenetic Tree</h1></summary>
             <div class="section-content">
+                <p class="text-sm text-gray-500 mb-4">Hierarchical view of the taxonomic classifications found within a single chosen sample.</p>
                 <div class="mb-4 flex items-center gap-4 bg-gray-50 p-4 rounded-xl">
                     <div class="flex-1">
                         <label class="block text-sm font-medium text-gray-700 mb-1">Select Sample for Tree View</label>
