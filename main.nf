@@ -98,8 +98,8 @@ workflow {
     ch_versions = ch_versions.mix(CONVERT_READS.out.versions.first(), READ_STATS.out.versions.first())
     
     ch_norm_stats = Channel.empty()
-    if (params.subsample && params.normalize) {
-        error "Both --subsample and --normalize specified. Please select only one read reduction method."
+    if (params.subsample && params.norm) {
+        error "Both --subsample and --norm specified. Please select only one read reduction method."
     }
     
     if (params.subsample) {

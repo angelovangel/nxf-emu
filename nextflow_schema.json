@@ -1,0 +1,220 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema",
+  "$id": "https://raw.githubusercontent.com/angelovangel/nxf-savont/master/nextflow_schema.json",
+  "title": "angelovangel/nxf-savont",
+  "workflow_title": "NXF-SAVONT workflow",
+  "description": "Nextflow pipeline for taxonomic profiling for full-length 16S reads (ONT, PacBio)",
+  "url": "https://github.com/angelovangel/nxf-savont",
+  "type": "object",
+  "definitions": {
+    "input_output_options": {
+      "title": "Input/Output options",
+      "type": "object",
+      "fa_icon": "fas fa-folder-open",
+      "description": "Define input and output paths.",
+      "properties": {
+        "pod5": {
+          "type": "string",
+          "format": "directory-path",
+          "fa_icon": "fas fa-folder-open",
+          "description": "Directory with POD5 files (use when basecalling)",
+          "help_text": "Path to directory containing POD5 files for basecalling. If this is selected then basecalling will be performed (do not select --reads)."
+        },
+        "reads": {
+          "type": "string",
+          "format": "path",
+          "fa_icon": "fas fa-file",
+          "description": "BAM/FASTQ file or directory of reads (skips basecalling)",
+          "help_text": "Path to a single BAM/FASTQ file or directory containing multiple read files (each file is a sample). If this is selected then basecalling will be skipped (do not select --pod5)."
+        },
+        "outdir": {
+          "type": "string",
+          "description": "The name of the output directory where the results will be saved",
+          "fa_icon": "fas fa-poll",
+          "default": "output",
+          "help_text": "It is recommended to not change the default output directory"
+        }
+      },
+      "dependencies": {
+        "pod5": [
+          "model"
+        ]
+      },
+      "oneOf": [
+        {
+          "required": [
+            "pod5",
+            "model"
+          ]
+        },
+        {
+          "required": [
+            "reads"
+          ]
+        }
+      ]
+    },
+    "basecalling_options": {
+      "title": "Basecalling options",
+      "type": "object",
+      "fa_icon": "fas fa-microchip",
+      "description": "Options for Dorado basecalling.",
+      "properties": {
+        "model": {
+          "type": "string",
+          "description": "Dorado basecalling model",
+          "fa_icon": "fas fa-cog",
+          "default": "hac",
+          "help_text": "Name of the Dorado model to use (e.g., 'hac', 'sup')."
+        },
+        "samplename": {
+          "type": "string",
+          "description": "Sample name to use for non-barcoded runs",
+          "fa_icon": "fas fa-tag",
+          "help_text": "Sample name to use when basecalling single-sample POD5 files without barcoding."
+        }
+      }
+    },
+    "barcoding_options": {
+      "title": "Barcoding options",
+      "type": "object",
+      "fa_icon": "fas fa-barcode",
+      "description": "Options for barcoded runs.",
+      "properties": {
+        "kit": {
+          "type": "string",
+          "description": "Barcoding kit name",
+          "fa_icon": "fas fa-barcode",
+          "help_text": "Name of the barcoding kit used (e.g., 'SQK-16S114-24'). Required when run is barcoded.",
+          "enum": [
+            "SQK-16S024",
+            "SQK-16S114-24",
+            "SQK-NBD114-24",
+            "SQK-NBD114-96",
+            "TWIST-16-UDI",
+            "TWIST-96A-UDI"
+          ]
+        },
+        "samplesheet": {
+          "type": "string",
+          "format": "file-path",
+          "fa_icon": "fas fa-vials",
+          "description": "CSV or XLSX file with sample and barcode information",
+          "help_text": "Required when --kit is provided. Samplesheet must contain at least columns 'sample' and 'barcode'."
+        }
+      },
+      "dependencies": {
+        "kit": [
+          "samplesheet"
+        ],
+        "samplesheet": [
+          "kit"
+        ]
+      }
+    },
+    "filtering_options": {
+      "title": "Filtering options",
+      "type": "object",
+      "fa_icon": "fas fa-filter",
+      "description": "Options for read length filtering and normalization.",
+      "properties": {
+        "minreadlength": {
+          "type": "integer",
+          "description": "Minimum read length filter",
+          "fa_icon": "fas fa-compress-arrows-alt",
+          "default": 1100,
+          "help_text": "Minimum read length allowed for SAVONT processing."
+        },
+        "maxreadlength": {
+          "type": "integer",
+          "description": "Maximum read length filter",
+          "fa_icon": "fas fa-expand-arrows-alt",
+          "default": 2000,
+          "help_text": "Maximum read length allowed for SAVONT processing."
+        },
+        "subsample": {
+          "type": "number",
+          "description": "Subsample reads to this proportion",
+          "fa_icon": "fas fa-scissors",
+          "minimum": 0,
+          "maximum": 1,
+          "help_text": "Proportion of reads to keep (0 to 1). Cannot be used with --norm."
+        },
+        "norm": {
+          "type": "integer",
+          "description": "Normalize all samples to the lowest read count",
+          "fa_icon": "fas fa-balance-scale",
+          "help_text": "If provided, all samples will be normalized to the same depth (the depth of the smallest sample). Cannot be used with --subsample."
+        }
+      }
+    },
+    "taxonomic_profiling_options": {
+      "title": "Taxonomic profiling options",
+      "type": "object",
+      "fa_icon": "fas fa-bacteria",
+      "description": "Thresholds and database for classification.",
+      "properties": {
+        "db": {
+          "type": "string",
+          "description": "Classification database",
+          "fa_icon": "fas fa-database",
+          "default": "emu",
+          "enum": [
+            "emu",
+            "silva"
+          ],
+          "help_text": "Database to use for SAVONT classification."
+        },
+        "species_threshold": {
+          "type": "number",
+          "description": "Species classification threshold",
+          "fa_icon": "fas fa-percentage",
+          "default": 99,
+          "help_text": "Percentage identity threshold for species level."
+        },
+        "genus_threshold": {
+          "type": "number",
+          "description": "Genus classification threshold",
+          "fa_icon": "fas fa-percentage",
+          "default": 94.5,
+          "help_text": "Percentage identity threshold for genus level."
+        }
+      }
+    },
+    "generic_options": {
+      "title": "Generic options",
+      "type": "object",
+      "fa_icon": "fas fa-cogs",
+      "description": "System and performance options.",
+      "properties": {
+        "cpus": {
+          "type": "integer",
+          "description": "Number of CPUs to use",
+          "fa_icon": "fas fa-cpu",
+          "default": 16,
+          "help_text": "Number of CPUs to allocate for the workflow."
+        }
+      }
+    }
+  },
+  "allOf": [
+    {
+      "$ref": "#/definitions/input_output_options"
+    },
+    {
+      "$ref": "#/definitions/basecalling_options"
+    },
+    {
+      "$ref": "#/definitions/barcoding_options"
+    },
+    {
+      "$ref": "#/definitions/filtering_options"
+    },
+    {
+      "$ref": "#/definitions/taxonomic_profiling_options"
+    },
+    {
+      "$ref": "#/definitions/generic_options"
+    }
+  ]
+}
