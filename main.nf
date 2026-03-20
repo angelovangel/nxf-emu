@@ -1,8 +1,23 @@
 include {DORADO_BASECALL; DORADO_BASECALL_BARCODING} from "./modules/basecall.nf"
 include {MERGE_READS; READ_STATS; READ_HIST; CONVERT_EXCEL; VALIDATE_SAMPLESHEET; CONVERT_READS; SUBSAMPLE_READS; GET_MIN_READS; NORMALIZE_READS} from './modules/reads.nf'
 include {SAVONT_ASV; SAVONT_CLASSIFY; COMBINE_LINEAGE; TAXONKIT_LINEAGE} from './modules/taxonomy.nf'
-
 include {MAKE_REPORT; VERSIONS} from './modules/report.nf'
+include {showHelp; logColors} from './modules/utils.nf'
+
+if (params.help) {
+    showHelp()
+    exit 0
+}
+
+def c = logColors()
+
+log.info """
+    ${c.yellow}NXF-SAVONT${c.reset}
+    ${c.blue}Profile${c.reset}             : ${c.yellow}${workflow.profile}${c.reset}
+    ${c.blue}Container Engine${c.reset}    : ${c.yellow}${workflow.containerEngine ?: 'local'}${c.reset}
+    ${c.blue}Workflow version${c.reset}    : ${c.yellow}${workflow.manifest.version}${c.reset}
+    ==============================================
+""".stripIndent()
 
 if (params.kit && !params.samplesheet) {
     error "If --kit is specified, --samplesheet must also be provided."
@@ -37,8 +52,8 @@ def ch_summary_file = Channel.of(summary)
 
 
 workflow basecall {
-    ch_pod5 = Channel.fromPath(params.pod5, checkIfExists: true)
-    ch_samplesheet = params.samplesheet ? Channel.fromPath(params.samplesheet, checkIfExists: true) : null
+    ch_pod5 = params.pod5 ? Channel.fromPath(params.pod5, checkIfExists: true) : Channel.empty()
+    ch_samplesheet = params.samplesheet ? Channel.fromPath(params.samplesheet, checkIfExists: true) : Channel.empty()
     ch_versions = Channel.empty()
     
     if (params.kit) {    
@@ -85,10 +100,12 @@ workflow {
         } else {
             ch_reads = Channel.fromPath(params.reads, checkIfExists: true)        
         }
-    } else {
+    } else if (params.pod5) {
         def bc_out = basecall()
         ch_reads = bc_out.ch_basecall
         ch_versions = ch_versions.mix(bc_out.ch_versions)
+    } else {
+        ch_reads = Channel.empty()
     }
     
     

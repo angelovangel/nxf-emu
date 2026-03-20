@@ -180,6 +180,11 @@
           "fa_icon": "fas fa-cpu",
           "default": 16,
           "help_text": "Number of CPUs to allocate for the workflow."
+        },
+        "help": {
+          "type": "boolean",
+          "description": "Show help message",
+          "fa_icon": "fas fa-question-circle"
         }
       }
     }
