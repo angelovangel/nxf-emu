@@ -7,11 +7,11 @@
   "url": "https://github.com/angelovangel/nxf-savont",
   "type": "object",
   "definitions": {
-    "input_output_options": {
-      "title": "Input/Output options",
+    "input_options": {
+      "title": "Input options",
       "type": "object",
       "fa_icon": "fas fa-folder-open",
-      "description": "Define input and output paths.",
+      "description": "Define input reads or POD5 files for basecalling.",
       "properties": {
         "pod5": {
           "type": "string",
@@ -20,46 +20,6 @@
           "description": "Directory with POD5 files (use when basecalling)",
           "help_text": "Path to directory containing POD5 files for basecalling. If this is selected then basecalling will be performed (do not select --reads)."
         },
-        "reads": {
-          "type": "string",
-          "format": "path",
-          "fa_icon": "fas fa-file",
-          "description": "BAM/FASTQ file or directory of reads (skips basecalling)",
-          "help_text": "Path to a single BAM/FASTQ file or directory containing multiple read files (each file is a sample). If this is selected then basecalling will be skipped (do not select --pod5)."
-        },
-        "outdir": {
-          "type": "string",
-          "description": "The name of the output directory where the results will be saved",
-          "fa_icon": "fas fa-poll",
-          "default": "output",
-          "help_text": "It is recommended to not change the default output directory"
-        }
-      },
-      "dependencies": {
-        "pod5": [
-          "model"
-        ]
-      },
-      "oneOf": [
-        {
-          "required": [
-            "pod5",
-            "model"
-          ]
-        },
-        {
-          "required": [
-            "reads"
-          ]
-        }
-      ]
-    },
-    "basecalling_options": {
-      "title": "Basecalling options",
-      "type": "object",
-      "fa_icon": "fas fa-microchip",
-      "description": "Options for Dorado basecalling.",
-      "properties": {
         "model": {
           "type": "string",
           "description": "Dorado basecalling model",
@@ -67,11 +27,41 @@
           "default": "hac",
           "help_text": "Name of the Dorado model to use (e.g., 'hac', 'sup')."
         },
+        "reads": {
+          "type": "string",
+          "format": "path",
+          "fa_icon": "fas fa-file",
+          "description": "BAM/FASTQ file or directory of reads (skips basecalling)",
+          "help_text": "Path to a single BAM/FASTQ file or directory containing multiple read files (each file is a sample). If this is selected then basecalling will be skipped (do not select --pod5)."
+        },
         "samplename": {
           "type": "string",
           "description": "Sample name to use for non-barcoded runs",
           "fa_icon": "fas fa-tag",
           "help_text": "Sample name to use when basecalling single-sample POD5 files without barcoding."
+        }
+      },
+      "oneOf": [
+        {
+          "required": ["pod5", "model"]
+        },
+        {
+          "required": ["reads"]
+        }
+      ]
+    },
+    "output_options": {
+      "title": "Output options",
+      "type": "object",
+      "fa_icon": "fas fa-poll",
+      "description": "Define output directory.",
+      "properties": {
+        "outdir": {
+          "type": "string",
+          "description": "The name of the output directory where the results will be saved",
+          "fa_icon": "fas fa-poll",
+          "default": "output",
+          "help_text": "It is recommended to not change the default output directory"
         }
       }
     },
@@ -104,12 +94,8 @@
         }
       },
       "dependencies": {
-        "kit": [
-          "samplesheet"
-        ],
-        "samplesheet": [
-          "kit"
-        ]
+        "kit": ["samplesheet"],
+        "samplesheet": ["kit"]
       }
     },
     "filtering_options": {
@@ -199,10 +185,10 @@
   },
   "allOf": [
     {
-      "$ref": "#/definitions/input_output_options"
+      "$ref": "#/definitions/input_options"
     },
     {
-      "$ref": "#/definitions/basecalling_options"
+      "$ref": "#/definitions/output_options"
     },
     {
       "$ref": "#/definitions/barcoding_options"
