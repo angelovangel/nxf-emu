@@ -4,7 +4,8 @@ def logColors() {
         green: "\033[0;32m",
         blue: "\033[0;34m",
         yellow: "\033[0;33m",
-        cyan: "\033[0;36m"
+        cyan: "\033[0;36m",
+        red: "\033[0;31m"
     ]
 }
 
@@ -14,7 +15,7 @@ def showHelp() {
     log.info """
 =============================================
 ${c.yellow}NXF-SAVONT${c.reset}
-${c.yellow}taxonomic profiling for full-length 16S reads${c.reset}
+${c.yellow}taxonomic profiling for full-length 16S reads (ONT, PacBio)${c.reset}
 =============================================
 
 ${c.yellow}Input options:${c.reset}
@@ -27,7 +28,7 @@ ${c.yellow}Input options:${c.reset}
 ${c.yellow}Filtering options:${c.reset}
     ${c.green}--minreadlength <int>${c.reset}  Minimum read length filter (default: 1100)
     ${c.green}--maxreadlength <int>${c.reset}  Maximum read length filter (default: 2000)
-    ${c.green}--norm <int>${c.reset}           Normalize all samples to this depth (smallest sample depth if not specified)
+    ${c.green}--norm${c.reset}                 Normalize all samples to the depth of the smallest sample
     ${c.green}--subsample <float>${c.reset}    Subsample reads to this proportion (0 to 1)
 
 ${c.yellow}Taxonomic profiling:${c.reset}

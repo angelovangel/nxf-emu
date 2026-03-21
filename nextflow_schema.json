@@ -43,10 +43,15 @@
       },
       "oneOf": [
         {
-          "required": ["pod5", "model"]
+          "required": [
+            "pod5",
+            "model"
+          ]
         },
         {
-          "required": ["reads"]
+          "required": [
+            "reads"
+          ]
         }
       ]
     },
@@ -55,7 +60,9 @@
       "type": "object",
       "fa_icon": "fas fa-poll",
       "description": "Define output directory.",
-      "required": ["outdir"],
+      "required": [
+        "outdir"
+      ],
       "properties": {
         "outdir": {
           "type": "string",
@@ -95,8 +102,12 @@
         }
       },
       "dependencies": {
-        "kit": ["samplesheet"],
-        "samplesheet": ["kit"]
+        "kit": [
+          "samplesheet"
+        ],
+        "samplesheet": [
+          "kit"
+        ]
       }
     },
     "filtering_options": {
@@ -123,14 +134,16 @@
           "type": "number",
           "description": "Subsample reads to this proportion",
           "fa_icon": "fas fa-scissors",
-          "minimum": 0,
-          "maximum": 1,
-          "help_text": "Proportion of reads to keep (0 to 1). Cannot be used with --norm."
+          "minimum": 0.01,
+          "maximum": 1.0,
+          "default": 1.0,
+          "help_text": "Proportion of reads to keep (0.01 to 1.0). Cannot be used with --norm."
         },
         "norm": {
-          "type": "integer",
+          "type": "boolean",
           "description": "Normalize all samples to the lowest read count",
           "fa_icon": "fas fa-balance-scale",
+          "default": false,
           "help_text": "If provided, all samples will be normalized to the same depth (the depth of the smallest sample). Cannot be used with --subsample."
         }
       }

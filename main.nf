@@ -19,13 +19,6 @@ log.info """
     ==============================================
 """.stripIndent()
 
-if (params.kit && !params.samplesheet) {
-    error "If --kit is specified, --samplesheet must also be provided."
-}
-
-if (!params.kit && params.samplesheet) {
-    error "If --samplesheet is provided, --kit must also be specified."
-}
 
 // Log execution environment
 def summary = """
@@ -91,7 +84,41 @@ workflow basecall {
     ch_versions = ch_versions
 }
 
+process PARAMS_CHECK {
+    executor 'local'
+    cpus 1
+    
+    input:
+    val subsample
+    val norm
+    val kit
+    val samplesheet
+
+    script:
+    def msg = ""
+    if (subsample < 1.0 && norm) msg += "Both --subsample and --norm specified. Please select only one read reduction method.\\n"
+    if (kit && !samplesheet)      msg += "If --kit is specified, --samplesheet must also be provided.\\n"
+    if (!kit && samplesheet)      msg += "If --samplesheet is provided, --kit must also be specified.\\n"
+    
+    if (msg)
+        """
+        echo -e "ERROR: ${msg}" >&2
+        exit 1
+        """
+    else
+        """
+        true
+        """
+}
+
 workflow {
+    PARAMS_CHECK(
+        params.subsample ?: 1.0, 
+        params.norm ?: false, 
+        params.kit ?: '', 
+        params.samplesheet ?: ''
+    )
+
     ch_versions = Channel.empty()
     if (params.reads) {        
         if ( file(params.reads).isDirectory() ) {
@@ -115,11 +142,8 @@ workflow {
     ch_versions = ch_versions.mix(CONVERT_READS.out.versions.first(), READ_STATS.out.versions.first())
     
     ch_norm_stats = Channel.empty()
-    if (params.subsample && params.norm) {
-        error "Both --subsample and --norm specified. Please select only one read reduction method."
-    }
     
-    if (params.subsample) {
+    if (params.subsample < 1.0) {
         SUBSAMPLE_READS(ch_reads_conv)
         ch_reads_conv = SUBSAMPLE_READS.out.reads
         ch_norm_stats = SUBSAMPLE_READS.out.stats
